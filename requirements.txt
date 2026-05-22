@@ -1,0 +1,22 @@
+# ═══════════════════════════════════════
+#  MediRoute 백엔드 의존성
+# ═══════════════════════════════════════
+
+# STEP 1: FastAPI + Claude API 프록시
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.3
+pydantic-settings==2.9.1
+httpx==0.28.1
+python-dotenv==1.1.0
+
+# STEP 2: 심평원 API XML 파싱
+xmltodict==0.14.1
+
+# STEP 4: DB + 인증
+sqlalchemy[asyncio]==2.0.36
+aiosqlite==0.20.0
+python-jose[cryptography]==3.3.0
+
+# STEP 5: PostgreSQL (배포 시 활성화)
+# asyncpg==0.30.0

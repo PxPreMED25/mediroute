@@ -1,0 +1,3697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediRoute — 보건의료빅데이터 기반 병원 길잡이</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EF;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE8;
+    --accent: #2B6CB0;
+    --accent2: #38A169;
+    --warn: #E53E3E;
+    --warn-soft: #FFF5F5;
+    --warn-border: #FEB2B2;
+    --text: #1A202C;
+    --text-mid: #4A5568;
+    --text-light: #718096;
+    --border: #E2DCDC;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.07);
+    --shadow-lg: 0 12px 48px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text-mid); font-size: 13px; font-family: 'Noto Sans KR', sans-serif; font-weight: 400; margin-left: 10px; }
+
+  /* ─── STEP NAV ─── */
+  .step-nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+  .step-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 20px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--text-light);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .step-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .step-btn .num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    color: var(--text-light);
+    transition: all 0.2s;
+  }
+  .step-btn.active .num {
+    background: var(--accent);
+    color: #fff;
+  }
+  .step-btn.done .num { background: var(--accent2); color: #fff; }
+  .step-btn.done { color: var(--accent2); }
+
+  /* ─── MAIN LAYOUT ─── */
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ─── SECTION CARD ─── */
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .card-num {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .card-title { font-size: 16px; font-weight: 700; color: var(--text); line-height: 1.4; }
+  .card-sub { font-size: 14px; color: var(--text-light); margin-top: 2px; }
+
+  /* ─── INPUTS ─── */
+  .date-input-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .date-input-wrap input[type="text"] {
+    padding-right: 44px;
+  }
+  .date-picker-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: var(--text-mid);
+    font-size: 15px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .date-picker-btn:hover { color: var(--accent); }
+  .hidden-date-picker {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    width: 30px;
+    height: 30px;
+    transform: translateY(-50%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .input-wrap { position: relative; }
+  textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 50px 14px 16px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 15px;
+    resize: none;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.2s;
+    line-height: 1.7;
+  }
+  textarea:focus { outline: none; border-color: var(--accent); background: #fff; }
+  textarea::placeholder { color: var(--text-light); }
+
+  .mic-btn {
+    position: absolute;
+    right: 12px; top: 12px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    color: var(--text-mid);
+  }
+  .mic-btn:hover { background: var(--accent); color: #fff; }
+  .mic-btn.listening { background: var(--warn); color: #fff; animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-item label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-mid);
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ─── IMAGE UPLOAD ─── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    position: relative;
+  }
+  .upload-zone:hover { border-color: var(--accent); background: #EBF4FF; }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-text { font-size: 14px; color: var(--text-mid); }
+  .upload-text strong { color: var(--accent); }
+  .upload-preview { max-width: 100%; border-radius: var(--radius-sm); margin-top: 12px; display: none; }
+  .img-delete-btn { margin-top:10px; padding:8px 18px; border:1px solid #E53E3E; color:#E53E3E; background:#FFF5F5; border-radius:var(--radius-sm); font-size:13px; cursor:pointer; transition:all .2s; display:none; }
+  .img-delete-btn:hover { background:#E53E3E; color:#fff; }
+  .upload-preview-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .upload-preview-item {
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    padding: 6px;
+  }
+  .upload-preview-item img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--border);
+  }
+  .upload-preview-name {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ─── SYMPTOM TAGS ─── */
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag {
+    padding: 7px 14px;
+    border-radius: 999px;
+    border: 1.5px solid var(--border);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    color: var(--text-mid);
+    user-select: none;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+  .tag.selected { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ─── BODY MAP ─── */
+  .body-areas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .body-area {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    color: var(--text-mid);
+    user-select: none;
+  }
+  .body-area .ba-check {
+    width: 18px; height: 18px; flex-shrink: 0;
+    border-radius: 4px;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    font-size: 11px; color: transparent;
+  }
+  .body-area:hover { border-color: var(--accent); color: var(--text); }
+  .body-area:hover .ba-check { border-color: var(--accent); }
+  .body-area.selected { background: #EBF4FF; border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .body-area.selected .ba-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ─── CHECK ITEMS ─── */
+  .check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg);
+    user-select: none;
+  }
+  .check-item.warn-item { border-color: var(--warn-border); background: var(--warn-soft); }
+  .check-item.warn-item.checked { background: #FED7D7; border-color: var(--warn); }
+  .check-item:not(.warn-item):hover { border-color: var(--accent); }
+  .check-item.checked:not(.warn-item) { background: #EBF4FF; border-color: var(--accent); }
+  .check-box {
+    width: 20px; height: 20px; border-radius: 5px;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .check-item.checked .check-box { background: var(--accent); border-color: var(--accent); }
+  .check-item.warn-item.checked .check-box { background: var(--warn); border-color: var(--warn); }
+  .check-label { font-size: 14px; color: var(--text); }
+
+  /* ─── SUBMIT BTN ─── */
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .submit-btn:hover { background: #2558A0; transform: translateY(-1px); box-shadow: var(--shadow); }
+
+  /* ─── LOADING ─── */
+  #loading {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .spinner {
+    width: 48px; height: 48px;
+    border: 4px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── RESULT PAGE ─── */
+  .result-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: var(--surface);
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .rtab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .rtab.active { background: var(--accent); color: #fff; }
+
+  /* emergency banner */
+  .emergency-banner {
+    background: #FFF5F5;
+    border: 2px solid var(--warn);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    animation: fadeIn 0.3s;
+  }
+  .emergency-icon { font-size: 28px; flex-shrink: 0; }
+  .emergency-text strong { color: var(--warn); font-size: 15px; }
+  .emergency-text p { font-size: 13px; color: var(--text-mid); margin-top: 4px; }
+
+  /* dept cards */
+  .dept-list { display: flex; flex-direction: column; gap: 10px; }
+  .dept-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+  }
+  .dept-rank {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .dept-rank.r2 { background: #6B7280; }
+  .dept-rank.r3 { background: #9CA3AF; }
+  .dept-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .dept-reason { font-size: 14px; color: var(--text-mid); }
+
+  /* hospital level cards */
+  .hosp-levels { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 6px; }
+  .hosp-level {
+    border-radius: var(--radius-sm);
+    padding: 16px 14px;
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    text-align: center;
+  }
+  .hosp-level .hl-icon { font-size: 24px; margin-bottom: 8px; }
+  .hosp-level .hl-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .hosp-level .hl-desc { font-size: 11px; color: var(--text-light); line-height: 1.5; }
+  .hosp-level.recommended {
+    background: #EBF4FF;
+    border-color: var(--accent);
+  }
+  .hosp-level.recommended .hl-name { color: var(--accent); }
+  .hl-badge {
+    display: inline-block;
+    font-size: 10px;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 999px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  /* nearby hospitals */
+  .hosp-nearby { display: flex; flex-direction: column; gap: 10px; }
+  .hosp-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .hosp-item:hover { border-color: var(--accent); }
+  .hosp-type-badge {
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .badge-clinic { background: #C6F6D5; color: #22543D; }
+  .badge-hospital { background: #BEE3F8; color: #2C5282; }
+  .badge-specialist { background: #E9D8FD; color: #553C9A; }
+  .badge-uni { background: #FEEBC8; color: #7B341E; }
+  .hosp-info .hosp-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .hosp-info .hosp-meta { font-size: 13px; color: var(--text-light); }
+  .hosp-info .hosp-hours { font-size: 13px; color: var(--accent2); margin-top: 2px; font-weight: 500; }
+  .hosp-info .hosp-fit { font-size: 13px; color: var(--text-mid); margin-top: 4px; }
+
+  /* visit memo card */
+  .memo-card {
+    background: linear-gradient(135deg, #EBF4FF 0%, #F0FFF4 100%);
+    border: 1.5px solid #BEE3F8;
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .memo-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .memo-section { margin-bottom: 16px; }
+  .memo-section h4 { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+  .memo-list { list-style: none; padding: 0; }
+  .memo-list li {
+    font-size: 13px;
+    color: var(--text);
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding-left: 16px;
+    position: relative;
+  }
+  .memo-list li::before { content: "·"; position: absolute; left: 4px; color: var(--accent); font-weight: 700; }
+  .memo-copy-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 16px;
+  }
+  .memo-copy-btn:hover { background: #2558A0; }
+
+  /* symptom analysis */
+  .analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .analysis-item {
+    padding: 12px 14px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .analysis-label { font-size: 11px; color: var(--text-light); font-weight: 600; margin-bottom: 4px; letter-spacing: 0.3px; }
+  .analysis-value { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  /* ─── COST PAGE ─── */
+  .cost-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 20px 0;
+    overflow-x: auto;
+  }
+  .cost-step {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    position: relative;
+  }
+  .cost-step-box {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 10px;
+    margin: 0 6px;
+    transition: all 0.2s;
+  }
+  .cost-step.active .cost-step-box {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+  .cost-step-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .cost-step-amount { font-size: 13px; color: var(--accent); font-weight: 600; }
+  .cost-step-insure { font-size: 11px; color: var(--accent2); }
+  .cost-arrow { color: var(--text-light); font-size: 18px; flex-shrink: 0; }
+
+  .cost-range-bar {
+    background: var(--surface2);
+    border-radius: 8px;
+    height: 10px;
+    overflow: hidden;
+    margin: 8px 0;
+    position: relative;
+  }
+  .cost-range-fill {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+  }
+  .cost-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-light); }
+
+  .cost-card {
+    padding: 18px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--bg);
+    margin-bottom: 12px;
+  }
+  .cost-card-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .cost-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cost-row:last-child { border-bottom: none; }
+  .cost-row-label { font-size: 13px; color: var(--text-mid); }
+  .cost-row-value { font-size: 14px; font-weight: 600; color: var(--text); }
+  .cost-row-value.green { color: var(--accent2); }
+  .cost-row-value.blue { color: var(--accent); }
+
+  .route-cards { display: flex; flex-direction: column; gap: 12px; }
+  .route-card {
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .route-icon-box {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .route-icon-box.green { background: #F0FFF4; }
+  .route-icon-box.blue { background: #EBF4FF; }
+  .route-icon-box.orange { background: #FFFAF0; }
+  .route-card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .route-card-desc { font-size: 13px; color: var(--text-mid); line-height: 1.6; }
+  .route-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 6px;
+  }
+  .route-tag.best { background: #C6F6D5; color: #22543D; }
+  .route-tag.fast { background: #BEE3F8; color: #2C5282; }
+  .route-tag.pro { background: #E9D8FD; color: #553C9A; }
+
+  .insure-card {
+    background: linear-gradient(135deg, #F0FFF4, #EBF4FF);
+    border: 1.5px solid #BEE3F8;
+    border-radius: var(--radius-sm);
+    padding: 18px;
+  }
+  .insure-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 10px; }
+  .insure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .insure-item {
+    padding: 12px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .insure-item-label { font-size: 11px; color: var(--text-light); margin-bottom: 4px; }
+  .insure-item-value { font-size: 14px; font-weight: 600; color: var(--accent); }
+
+
+
+  /* ─── ADDED: expected diseases / hospital filtering / cost comparison ─── */
+  .disease-list { display: flex; flex-direction: column; gap: 10px; }
+  .disease-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border); background: var(--bg);
+  }
+  .disease-rank {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; display: flex;
+    align-items: center; justify-content: center; font-size: 12px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .disease-name { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+  .disease-desc { font-size: 13px; color: var(--text-mid); }
+  .hosp-level { cursor: pointer; transition: all 0.2s; }
+  .hosp-level:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .hosp-sort-note { font-size: 12px; color: var(--text-light); margin: 8px 0 12px; }
+  .hosp-distance { font-size: 12px; color: var(--accent); font-weight: 700; margin-top: 4px; }
+  .memo-copy-btn.disabled { background: var(--surface2) !important; color: var(--text-light) !important; cursor: not-allowed; }
+  .memo-copy-btn.outline { background: var(--surface) !important; color: var(--accent) !important; border: 1.5px solid var(--accent); }
+  .route-card { cursor: pointer; transition: all 0.2s; }
+  .route-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .route-card.active { background: #EBF4FF; border-color: var(--accent); }
+  .compare-table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: var(--radius-sm); }
+  .compare-table th, .compare-table td { border: 1px solid var(--border); padding: 10px 12px; font-size: 13px; text-align: left; }
+  .compare-table th { background: var(--surface2); color: var(--text-mid); font-weight: 700; }
+  .compare-table td { background: var(--surface); color: var(--text); }
+  .receipt-upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .mini-upload { position: relative; border: 1.5px dashed var(--border); border-radius: var(--radius-sm); padding: 18px; background: var(--bg); cursor: pointer; }
+  .mini-upload:hover { border-color: var(--accent); background: #EBF4FF; }
+  .mini-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .mini-upload-title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .mini-upload-desc { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+  .claim-action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .claim-action-btn { flex: 1; min-width: 150px; border: 1.5px solid var(--accent); background: #fff; color: var(--accent); padding: 12px 14px; font-family: 'Noto Sans KR', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; border-radius: 0; }
+  .claim-action-btn:hover { background: #EBF4FF; }
+  .claim-action-btn.primary { background: var(--accent); color: #fff; }
+  .claim-action-btn.primary:hover { background: #2558A0; }
+  .insurance-result { margin-top: 12px; padding: 12px 14px; background: #F0FFF4; border: 1px solid #C6F6D5; border-radius: var(--radius-sm); font-size: 13px; color: var(--text-mid); line-height: 1.7; }
+
+  /* ─── REQUESTED: 내부 칸은 직각 모서리로 표시 ─── */
+  .analysis-item,
+  .disease-item,
+  .dept-card,
+  .hosp-level,
+  .hosp-item,
+  .hosp-empty,
+  .memo-card,
+  .cost-step-box,
+  .cost-card,
+  .route-card,
+  .insure-card,
+  .insure-item,
+  .compare-table,
+  .compare-table th,
+  .compare-table td,
+  .mini-upload,
+  .insurance-result,
+  .upload-zone,
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    border-radius: 0 !important;
+  }
+  .dept-card { cursor: pointer; }
+  .dept-card:hover { border-color: var(--accent); background: #EBF4FF; }
+  .memo-card.editing { outline: 2px solid var(--accent); background: #fff; }
+  .memo-card[contenteditable="true"] { cursor: text; }
+
+  @media (max-width: 600px) { .receipt-upload-grid { grid-template-columns: 1fr; } }
+
+  /* ─── DISCLAIMER ─── */
+  .disclaimer {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.7;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .disclaimer-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ─── NAV BUTTONS ─── */
+  .nav-btns {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .btn-back {
+    flex: 1;
+    padding: 14px 24px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-mid);
+    text-align: center;
+  }
+  .btn-back:hover { border-color: var(--text-mid); }
+  .btn-next {
+    flex: 1;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-next:hover { background: #2558A0; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--text);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: transform 0.3s;
+    z-index: 999;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── SYMPTOM CANDIDATES (from image) ─── */
+  .img-candidates {
+    margin-top: 14px;
+    padding: 14px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+  }
+  .img-candidates-title { font-size: 12px; font-weight: 600; color: var(--text-mid); margin-bottom: 8px; }
+  .img-cand-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .img-cand-tag {
+    padding: 5px 12px;
+    background: #EBF4FF;
+    border: 1px solid #BEE3F8;
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .img-cand-tag:hover { background: var(--accent); color: #fff; }
+
+  /* section divider */
+  .section-divider {
+    border: none;
+    border-top: 1.5px solid var(--border);
+    margin: 20px 0;
+  }
+
+  .hosp-empty { border-radius: 0 !important; }
+
+  .warn-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--warn);
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--warn-soft);
+    border-radius: 8px;
+  }
+
+
+  /* ─── REQUESTED: 내부 칸은 직각 모서리로 표시 ─── */
+  .analysis-item,
+  .disease-item,
+  .dept-card,
+  .hosp-level,
+  .hosp-item,
+  .hosp-empty,
+  .memo-card,
+  .cost-step-box,
+  .cost-card,
+  .route-card,
+  .insure-card,
+  .insure-item,
+  .compare-table,
+  .compare-table th,
+  .compare-table td,
+  .mini-upload,
+  .insurance-result,
+  .upload-zone,
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea {
+    border-radius: 0 !important;
+  }
+  .dept-card { cursor: pointer; }
+  .dept-card:hover { border-color: var(--accent); background: #EBF4FF; }
+  .memo-card.editing { outline: 2px solid var(--accent); background: #fff; }
+  .memo-card[contenteditable="true"] { cursor: text; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .hosp-levels { grid-template-columns: 1fr; }
+    .analysis-grid { grid-template-columns: 1fr; }
+    .check-grid { grid-template-columns: 1fr; }
+    .body-areas { grid-template-columns: repeat(2, 1fr); }
+    .insure-grid { grid-template-columns: 1fr; }
+    main { padding: 20px 12px 80px; }
+    .card { padding: 20px 16px; }
+  }
+
+
+  /* ─── SQUARE INNER CELLS OVERRIDE ─── */
+  /* 내부 선택/입력/결과 칸은 직각으로 표시 */
+  textarea,
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  .upload-zone,
+  .upload-preview,
+  .upload-preview-list,
+  .upload-preview-item,
+  .upload-preview-item img,
+  .tag,
+  .body-area,
+  .body-area .ba-check,
+  .check-item,
+  .check-box,
+  .img-candidates,
+  .img-cand-tag,
+  .analysis-item,
+  .dept-card,
+  .hosp-level,
+  .hosp-item,
+  .hosp-type-badge,
+  .memo-card,
+  .memo-list li,
+  .cost-step-box,
+  .cost-range-bar,
+  .cost-range-fill,
+  .cost-card,
+  .route-card,
+  .route-tag,
+  .insure-card,
+  .insure-item,
+  .comparison-table,
+  .receipt-upload-box,
+  .claim-status-box,
+  .disclaimer,
+  .result-tabs,
+  .rtab,
+  .hosp-empty { border-radius: 0 !important; }
+
+  .warn-note {
+    border-radius: 0 !important;
+  }
+
+
+  /* 추천 진료과 선택 시 선택 칸 글자 파란색 표시 */
+  .dept-card.selected-dept {
+    border-color: var(--accent) !important;
+    background: #EBF4FF !important;
+  }
+  .dept-card.selected-dept .dept-name,
+  .dept-card.selected-dept .dept-reason {
+    color: var(--accent) !important;
+  }
+
+
+
+/* PATCH: 추천 진료과 클릭 상태와 관련 병원 표시 */
+.dept-card { cursor: pointer; }
+.dept-card.selected-dept {
+  background: #EBF4FF !important;
+  border-color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-name,
+.dept-card.selected-dept .dept-reason {
+  color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-rank {
+  background: #2B6CB0 !important;
+  color: #fff !important;
+}
+
+</style>
+
+
+<style id="square-card-override">
+  /* 요청 반영: 큰 카드/섹션 테두리까지 직각 처리 */
+  .card,
+  .memo-card,
+  .insure-card,
+  .emergency-banner,
+  .disclaimer,
+  .result-tabs,
+  .upload-zone,
+  .img-candidates,
+  .analysis-item,
+  .dept-card,
+  .hosp-level,
+  .hosp-item,
+  .hosp-empty,
+  .cost-step-box,
+  .cost-card,
+  .route-card,
+  .insure-item,
+  .comparison-card,
+  .mini-upload,
+  .insurance-result,
+  input,
+  select,
+  textarea,
+  button {
+    border-radius: 0 !important;
+  }
+  .logo,
+  .card-num,
+  .dept-rank,
+  .step-btn .num,
+  .mic-btn,
+  .hosp-type-badge,
+  .hl-badge,
+  .route-tag,
+  .toast {
+    border-radius: 999px !important;
+  }
+  .ba-check,
+  .check-box {
+    border-radius: 0 !important;
+  }
+
+  /* 추천 진료과 선택 시 선택 칸 글자 파란색 표시 */
+  .dept-card.selected-dept {
+    border-color: var(--accent) !important;
+    background: #EBF4FF !important;
+  }
+  .dept-card.selected-dept .dept-name,
+  .dept-card.selected-dept .dept-reason {
+    color: var(--accent) !important;
+  }
+
+
+
+/* PATCH: 추천 진료과 클릭 상태와 관련 병원 표시 */
+.dept-card { cursor: pointer; }
+.dept-card.selected-dept {
+  background: #EBF4FF !important;
+  border-color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-name,
+.dept-card.selected-dept .dept-reason {
+  color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-rank {
+  background: #2B6CB0 !important;
+  color: #fff !important;
+}
+
+</style>
+
+
+<style id="requested-color-sticky-override">
+  /* 1) 상단 단계바: 완료된 항목은 하늘색, 현재 클릭한 페이지는 기존 파란색 유지 */
+  :root {
+    --sky: #38BDF8;
+    --sky-soft: #E0F2FE;
+    --sky-text: #0369A1;
+    --orange: #F59E0B;
+    --orange-soft: #FEF3C7;
+    --orange-text: #92400E;
+  }
+
+  header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 300 !important;
+  }
+
+  .step-nav {
+    position: sticky !important;
+    top: 64px !important;
+    z-index: 299 !important;
+    background: var(--surface) !important;
+  }
+
+  .step-btn.done {
+    color: var(--sky-text) !important;
+  }
+
+  .step-btn.done .num {
+    background: var(--sky) !important;
+    color: #fff !important;
+  }
+
+  .step-btn.active {
+    color: var(--accent) !important;
+    border-bottom-color: var(--accent) !important;
+  }
+
+  .step-btn.active .num {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+
+  /* 2) 예상 비용 흐름: 초록색 보조 문구를 하늘색으로 변경 */
+  .cost-step-insure {
+    color: var(--sky-text) !important;
+  }
+
+  .cost-step.active .cost-step-box {
+    background: var(--sky-soft) !important;
+    border-color: var(--accent) !important;
+  }
+
+  /* 3) 치료 경로 태그: 보라색 계열을 주황색 계열로 변경 */
+  .route-tag.pro,
+  .route-tag.best,
+  .route-tag.fast {
+    background: var(--orange-soft) !important;
+    color: var(--orange-text) !important;
+  }
+
+  .route-card.active {
+    background: #FFF7ED !important;
+    border-color: var(--orange) !important;
+  }
+
+  /* 추천 진료과 선택 시 선택 칸 글자 파란색 표시 */
+  .dept-card.selected-dept {
+    border-color: var(--accent) !important;
+    background: #EBF4FF !important;
+  }
+  .dept-card.selected-dept .dept-name,
+  .dept-card.selected-dept .dept-reason {
+    color: var(--accent) !important;
+  }
+
+
+
+/* PATCH: 추천 진료과 클릭 상태와 관련 병원 표시 */
+.dept-card { cursor: pointer; }
+.dept-card.selected-dept {
+  background: #EBF4FF !important;
+  border-color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-name,
+.dept-card.selected-dept .dept-reason {
+  color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-rank {
+  background: #2B6CB0 !important;
+  color: #fff !important;
+}
+
+</style>
+
+
+<style id="final-color-detail-override">
+  /* 상단 단계바: 완료/대기 항목은 낮은 톤 하늘색, 현재 페이지는 파란색 유지 */
+  :root {
+    --sky-muted: #7EC8E3;
+    --sky-muted-soft: #EAF7FC;
+    --sky-muted-text: #2F7FA4;
+    --route-red: #E05656;
+    --route-red-soft: #FDECEC;
+    --route-green: #7CBF66;
+    --route-green-soft: #EEF8EA;
+    --route-navy: #1E3A8A;
+    --route-navy-soft: #E8EEFF;
+  }
+
+  .step-btn:not(.active) {
+    color: var(--sky-muted-text) !important;
+  }
+  .step-btn:not(.active) .num {
+    background: var(--sky-muted-soft) !important;
+    color: var(--sky-muted-text) !important;
+  }
+  .step-btn.done {
+    color: var(--sky-muted-text) !important;
+  }
+  .step-btn.done .num {
+    background: var(--sky-muted) !important;
+    color: #fff !important;
+  }
+  .step-btn.active {
+    color: var(--accent) !important;
+    border-bottom-color: var(--accent) !important;
+  }
+  .step-btn.active .num {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+
+  /* 예상 비용 흐름의 보조 문구: 낮은 톤 하늘색 */
+  .cost-step-insure {
+    color: var(--sky-muted-text) !important;
+  }
+  .cost-step.active .cost-step-box {
+    background: var(--sky-muted-soft) !important;
+    border-color: var(--accent) !important;
+  }
+
+  /* 치료 경로별 색상 */
+  .route-tag.best {
+    background: var(--sky-muted-soft) !important;
+    color: var(--sky-muted-text) !important;
+  }
+  .route-tag.fast {
+    background: var(--route-red-soft) !important;
+    color: var(--route-red) !important;
+  }
+  .route-tag.cheap {
+    background: var(--route-green-soft) !important;
+    color: #3F8F3F !important;
+  }
+  .route-tag.specialist-route {
+    background: var(--route-navy-soft) !important;
+    color: var(--route-navy) !important;
+  }
+  .route-card.active {
+    background: #FFFFFF !important;
+    border-color: #F59E0B !important;
+  }
+
+  /* 방문 준비 증상 요약 카드 배경 흰색 */
+  .memo-card {
+    background: #FFFFFF !important;
+  }
+
+  /* 의료기관 리스트 배지 색상 */
+  .badge-specialist {
+    background: var(--sky-muted-soft) !important;
+    color: var(--sky-muted-text) !important;
+  }
+  .badge-uni {
+    background: var(--route-navy-soft) !important;
+    color: var(--route-navy) !important;
+  }
+
+  /* 추천 진료과 선택 시 선택 칸 글자 파란색 표시 */
+  .dept-card.selected-dept {
+    border-color: var(--accent) !important;
+    background: #EBF4FF !important;
+  }
+  .dept-card.selected-dept .dept-name,
+  .dept-card.selected-dept .dept-reason {
+    color: var(--accent) !important;
+  }
+
+
+
+/* PATCH: 추천 진료과 클릭 상태와 관련 병원 표시 */
+.dept-card { cursor: pointer; }
+.dept-card.selected-dept {
+  background: #EBF4FF !important;
+  border-color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-name,
+.dept-card.selected-dept .dept-reason {
+  color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-rank {
+  background: #2B6CB0 !important;
+  color: #fff !important;
+}
+
+</style>
+
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="logo">MediRoute <span>보건의료빅데이터 기반 병원 길잡이</span></span>
+  </div>
+</header>
+
+<!-- Step Nav -->
+<nav class="step-nav">
+  <button class="step-btn active" id="snav-1" onclick="goStep(1)">
+    <span class="num">1</span> 증상 입력
+  </button>
+  <button class="step-btn" id="snav-2" onclick="goStep(2)">
+    <span class="num">2</span> 결과 확인
+  </button>
+  <button class="step-btn" id="snav-3" onclick="goStep(3)">
+    <span class="num">3</span> 방문 준비
+  </button>
+  <button class="step-btn" id="snav-4" onclick="goStep(4)">
+    <span class="num">4</span> 예상 비용
+  </button>
+</nav>
+
+<main>
+
+<!-- ═══════════ PAGE 1 : 증상 입력 ═══════════ -->
+<div class="page active" id="page-1">
+
+  <!-- 어디가 아프신가요? -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div>
+        <div class="card-title">어디가 아프신가요?</div>
+        <div class="card-sub">해당 부위를 모두 선택해 주세요</div>
+      </div>
+    </div>
+    <div class="body-areas" id="bodyAreas">
+      <div class="body-area" onclick="toggleArea(this,'머리·두피')"><div class="ba-check">✓</div>머리·두피</div>
+      <div class="body-area" onclick="toggleArea(this,'눈')"><div class="ba-check">✓</div>눈</div>
+      <div class="body-area" onclick="toggleArea(this,'코')"><div class="ba-check">✓</div>코</div>
+      <div class="body-area" onclick="toggleArea(this,'귀')"><div class="ba-check">✓</div>귀</div>
+      <div class="body-area" onclick="toggleArea(this,'입·치아')"><div class="ba-check">✓</div>입·치아</div>
+      <div class="body-area" onclick="toggleArea(this,'턱·침샘')"><div class="ba-check">✓</div>턱·침샘</div>
+      <div class="body-area" onclick="toggleArea(this,'목·인후')"><div class="ba-check">✓</div>목·인후</div>
+      <div class="body-area" onclick="toggleArea(this,'어깨')"><div class="ba-check">✓</div>어깨</div>
+      <div class="body-area" onclick="toggleArea(this,'가슴·심장')"><div class="ba-check">✓</div>가슴·심장</div>
+      <div class="body-area" onclick="toggleArea(this,'유방')"><div class="ba-check">✓</div>유방</div>
+      <div class="body-area" onclick="toggleArea(this,'배·소화기')"><div class="ba-check">✓</div>배·소화기</div>
+      <div class="body-area" onclick="toggleArea(this,'옆구리')"><div class="ba-check">✓</div>옆구리</div>
+      <div class="body-area" onclick="toggleArea(this,'등·허리')"><div class="ba-check">✓</div>등·허리</div>
+      <div class="body-area" onclick="toggleArea(this,'골반·사타구니')"><div class="ba-check">✓</div>골반·사타구니</div>
+      <div class="body-area" onclick="toggleArea(this,'항문·직장')"><div class="ba-check">✓</div>항문·직장</div>
+      <div class="body-area" onclick="toggleArea(this,'생식기·비뇨기')"><div class="ba-check">✓</div>생식기·비뇨기</div>
+      <div class="body-area" onclick="toggleArea(this,'팔·손')"><div class="ba-check">✓</div>팔·손</div>
+      <div class="body-area" onclick="toggleArea(this,'손목·손가락')"><div class="ba-check">✓</div>손목·손가락</div>
+      <div class="body-area" onclick="toggleArea(this,'무릎')"><div class="ba-check">✓</div>무릎</div>
+      <div class="body-area" onclick="toggleArea(this,'다리·발')"><div class="ba-check">✓</div>다리·발</div>
+      <div class="body-area" onclick="toggleArea(this,'발목·발가락')"><div class="ba-check">✓</div>발목·발가락</div>
+      <div class="body-area" onclick="toggleArea(this,'피부')"><div class="ba-check">✓</div>피부</div>
+      <div class="body-area" onclick="toggleArea(this,'전신·여러 부위')"><div class="ba-check">✓</div>전신·여러 부위</div>
+      <div class="body-area" onclick="toggleArea(this,'잘 모르겠음')"><div class="ba-check">✓</div>잘 모르겠음</div>
+    </div>
+  </div>
+
+  <!-- 사진 첨부 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div>
+        <div class="card-title">사진 첨부</div>
+        <div class="card-sub">아픈 부위 사진을 올리면 증상 후보를 알려드립니다</div>
+      </div>
+    </div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" accept="image/*" id="imageInput" onchange="handleImageUpload(event)" multiple>
+      <div class="upload-icon">📷</div>
+      <div class="upload-text"><strong>클릭하여 사진 첨부</strong> 또는 여러 장을 여기에 드래그</div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:6px;">JPG, PNG, HEIC</div>
+    </div>
+    <div class="upload-preview-list" id="uploadPreviewList" style="display:none;"></div>
+    <button class="img-delete-btn" id="imgDeleteBtn" onclick="removeUploadedImages()">✕ 사진 삭제</button>
+    <div id="photoDateWrap" style="display:none;margin-top:10px;">
+      <label style="font-size:13px;font-weight:600;color:var(--text-mid);">사진 촬영 시기</label>
+      <input type="text" id="photoDate" placeholder="예) 3일 전, 2025-05-18, 어제" style="margin-top:4px;width:100%;padding:10px 12px;border:1px solid #CBD5E0;border-radius:var(--radius-sm);font-size:14px;">
+    </div>
+    <div class="img-candidates" id="imgCandidates" style="display:none;">
+      <div class="img-candidates-title">사진 기반 증상 후보 — 클릭하면 설명란에 추가됩니다</div>
+      <div class="img-cand-tags" id="imgCandTags"></div>
+    </div>
+  </div>
+
+  <!-- 증상 설명 -->
+  <div class="card">
+    <div class="card-header" style="justify-content:space-between;">
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div class="card-num"></div>
+        <div>
+          <div class="card-title">증상을 설명해 주세요</div>
+          <div class="card-sub">불편한 점을 편하게 말씀해 주세요</div>
+        </div>
+      </div>
+      <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="음성으로 입력" style="position:static;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z"/></svg>
+      </button>
+    </div>
+    <textarea id="symptomText" rows="4" placeholder="예) 왼쪽 턱 아래가 붓고 누런 분비물이 나와요. 어제부터 씹을 때 아파요."></textarea>
+    <div style="margin-top:14px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">빠른 선택</div>
+      <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;flex-wrap:nowrap;" id="quickTags">
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'붓기·부종')">붓기·부종</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'가려움')">가려움</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'분비물')">분비물</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'피로·무기력')">피로·무기력</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'어지러움')">어지러움</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'구역·구토')">구역·구토</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'발진·홍반')">발진·홍반</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'저림·마비')">저림·마비</div>
+        <div class="tag" style="white-space:nowrap;" onclick="addQuickTag(this,'기침·가래')">기침·가래</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 환자 정보 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div><div class="card-title">환자 정보</div></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label>나이</label>
+        <input type="number" id="age" placeholder="예) 42" min="1" max="120">
+      </div>
+      <div class="form-item">
+        <label>성별</label>
+        <select id="gender">
+          <option value="">선택</option>
+          <option value="남성">남성</option>
+          <option value="여성">여성</option>
+        </select>
+      </div>
+      <div class="form-item" style="grid-column:1/-1;">
+        <label>지역</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <select id="region-sido" onchange="updateSigungu()">
+            <option value="">시·도 선택</option>
+            <option>서울</option><option>경기</option><option>인천</option>
+            <option>대전</option><option>대구</option><option>부산</option>
+            <option>광주</option><option>울산</option><option>세종</option>
+            <option>강원</option><option>충북</option><option>충남</option>
+            <option>전북</option><option>전남</option><option>경북</option>
+            <option>경남</option><option>제주</option>
+          </select>
+          <select id="region-sigungu" onchange="updateEupmyeondong()" disabled>
+            <option value="">시·군·구 선택</option>
+          </select>
+          <select id="region-dong" disabled>
+            <option value="">읍·면·동 선택</option>
+          </select>
+        </div>
+        <div style="margin-top:8px;">
+          <input type="text" id="region-direct" placeholder="또는 주소 직접 입력" style="font-size:13px;">
+        </div>
+      </div>
+      <div class="form-item">
+        <label>증상 시작 (날짜)</label>
+        <div class="date-input-wrap">
+          <input type="text" id="duration" placeholder="YYYY-MM-DD" inputmode="numeric" maxlength="10" oninput="formatDateInput(this); syncPickerFromDuration(this)" onkeydown="handleDateBackspace(event, this)">
+          <button type="button" class="date-picker-btn" onclick="openDurationPicker()" aria-label="달력 열기">▾</button>
+          <input type="date" id="durationPicker" class="hidden-date-picker" onchange="syncDurationFromPicker(this)">
+        </div>
+      </div>
+      <div class="form-item">
+        <label>증상 시작 (글자)</label>
+        <input type="text" id="durationText" placeholder="예) 일주일 전부터, 한 달 전쯤">
+      </div>
+    </div>
+    <hr class="section-divider" style="margin:16px 0;">
+    <div style="font-size:12px;font-weight:600;color:var(--text-mid);margin-bottom:10px;">복용약 여부</div>
+    <div class="form-grid">
+      <div class="form-item">
+        <label>현재 복용 중인 약</label>
+        <input type="text" id="meds" placeholder="없으면 비워두세요">
+      </div>
+      <div class="form-item">
+        <label>기저질환 (있다면)</label>
+        <input type="text" id="disease" placeholder="예) 고혈압, 당뇨">
+      </div>
+    </div>
+  </div>
+
+
+  <button class="submit-btn" onclick="analyze()">
+    <span>결과 확인하기</span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+  </button>
+</div>
+
+<!-- ═══════════ LOADING ═══════════ -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div style="font-size:15px;font-weight:600;color:var(--text-mid);">증상을 분석하고 있습니다...</div>
+  <div style="font-size:13px;color:var(--text-light);margin-top:8px;">보건의료빅데이터를 기반으로 적합한 진료과를 찾고 있어요</div>
+</div>
+
+<!-- ═══════════ PAGE 2 : 결과 확인 ═══════════ -->
+<div class="page" id="page-2">
+
+  <!-- Emergency banner -->
+  <div class="emergency-banner" id="emergencyBanner" style="display:none;">
+    <div class="emergency-text">
+      <strong>즉시 응급 진료가 필요할 수 있습니다</strong>
+      <p>입력하신 증상 중 응급 관련 항목이 포함되어 있습니다. 지체 없이 응급실을 방문하거나 119에 신고하세요.</p>
+    </div>
+  </div>
+
+  <!-- 증상 분석 요약 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div><div class="card-title">증상 분석 요약</div></div>
+    </div>
+    <div class="analysis-grid" id="analysisSummary">
+      <div class="analysis-item">
+        <div class="analysis-label">증상 부위</div>
+        <div class="analysis-value" id="as-area">—</div>
+      </div>
+      <div class="analysis-item">
+        <div class="analysis-label">주요 증상</div>
+        <div class="analysis-value" id="as-symptom">—</div>
+      </div>
+      <div class="analysis-item">
+        <div class="analysis-label">증상 시작일</div>
+        <div class="analysis-value" id="as-duration">—</div>
+      </div>
+      <div class="analysis-item">
+        <div class="analysis-label">진료 필요도</div>
+        <div class="analysis-value" id="as-urgency">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 예상 질환 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div>
+        <div class="card-title">예상 질환</div>
+      </div>
+    </div>
+    <div class="disease-list" id="diseaseList"></div>
+  </div>
+
+  <!-- 추천 진료과 TOP 3 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div><div class="card-title">추천 진료과 TOP 3</div></div>
+    </div>
+    <div class="dept-list" id="deptList"></div>
+  </div>
+
+  <!-- 병원 안내 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div><div class="card-title">병원 안내</div></div>
+    </div>
+    <div class="hosp-levels" id="hospLevels">
+      <div class="hosp-level" id="hl-clinic" onclick="filterHospitals('의원')">
+        <div class="hl-name">동네 의원</div>
+        <div class="hl-desc">초기 상담과 기본 진료<br>대기 시간 짧고 접근 용이</div>
+      </div>
+      <div class="hosp-level" id="hl-specialist" onclick="filterHospitals('전문병원')">
+        <div class="hl-name">전문 병원</div>
+        <div class="hl-desc">전공의가 있는<br>특정 과에 해당하는 병원</div>
+      </div>
+      <div class="hosp-level" id="hl-university" onclick="filterHospitals('대학병원')">
+        <div class="hl-name">대학 병원</div>
+        <div class="hl-desc">소견서 필요</div>
+      </div>
+    </div>
+    <div id="hospGuide" style="font-size:13px;color:var(--text-mid);padding:12px;background:var(--bg);border-radius:var(--radius-sm);margin-top:0;">
+      입력하신 증상은 가까운 동네 의원에서 초진 후 필요 시 전문 병원으로 이동하는 것을 고려할 수 있습니다.
+    </div>
+  </div>
+
+  <!-- 내 주변 의료기관 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div><div class="card-title">내 주변 의료기관</div></div>
+    </div>
+    <div class="hosp-sort-note" id="hospSortNote">GPS 기준 거리순으로 정렬됩니다. 병원명을 클릭하면 네이버 지도 검색으로 이동합니다.</div>
+    <div class="hosp-nearby" id="hospNearby"></div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn-back" onclick="goStep(1)">← 이전으로</button>
+    <button class="btn-next" onclick="goStep(3)">다음으로 →</button>
+  </div>
+</div>
+
+<!-- ═══════════ PAGE 3 : 방문 준비 ═══════════ -->
+<div class="page" id="page-3">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div style="flex:1;">
+        <div class="card-title">증상 요약 카드</div>
+      </div>
+      <button class="memo-copy-btn outline" id="memoEditBtn" onclick="toggleMemoEdit()" style="margin-top:0;flex-shrink:0;">수정하기</button>
+    </div>
+    <div class="memo-card" id="memoCardEl">
+      <div class="memo-title">증상 요약 카드</div>
+      <div class="memo-section">
+        <h4>증상 정보</h4>
+        <ul class="memo-list" id="memoSymptoms"></ul>
+      </div>
+      <div class="memo-section">
+        <h4>병원에서 말씀하실 내용</h4>
+        <ul class="memo-list" id="memoSay"></ul>
+      </div>
+      <div class="memo-section">
+        <h4>의사에게 물어볼 질문</h4>
+        <ul class="memo-list" id="memoAsk"></ul>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+      <button class="memo-copy-btn" onclick="copyMemo()" style="flex:1;min-width:140px;background:#1E3A8A;">
+        클립보드에 복사
+      </button>
+      <button class="memo-copy-btn disabled" onclick="showToast('병원에 넘기기는 추후 연동 예정 기능입니다')" style="flex:1;min-width:140px;">
+        병원에 넘기기
+      </button>
+      <button class="memo-copy-btn" onclick="downloadMemoImage()" style="flex:1;min-width:140px;background:#38BDF8;color:#0C1A2E;">
+        이미지로 저장
+      </button>
+    </div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn-back" onclick="goStep(2)">← 이전으로</button>
+    <button class="btn-next" onclick="goStep(4)">다음으로 →</button>
+  </div>
+
+  <!-- 병원 준비물 체크리스트 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div style="flex:1;">
+        <div class="card-title">병원 준비물 체크리스트</div>
+      </div>
+    </div>
+    <div style="padding:0 4px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EDF2F7;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>증상 사진</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EDF2F7;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>복용약 이름</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EDF2F7;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>기존 검사 결과지</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EDF2F7;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>신분증</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>의뢰서 필요 여부 확인</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- 보험 준비물 체크리스트 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div style="flex:1;">
+        <div class="card-title">보험 준비물 체크리스트</div>
+      </div>
+    </div>
+    <div style="padding:0 4px;">
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EDF2F7;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>진료비 영수증</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EDF2F7;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>진료비 세부산정내역서</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:10px 0;cursor:pointer;">
+        <input type="checkbox" style="width:18px;height:18px;accent-color:#1E3A8A;"> <span>보험 청구용 서류</span>
+      </label>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ PAGE 4 : 예상 비용 ═══════════ -->
+<div class="page" id="page-4">
+
+  <!-- 치료 경로 제안 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div>
+        <div class="card-title">치료 경로 제안</div>
+        <div class="card-sub">경로를 클릭하면 아래 예상 비용이 해당 경로 기준으로 바뀝니다</div>
+      </div>
+    </div>
+    <div class="route-cards">
+      <div class="route-card" onclick="selectRoute('best')" id="routeCardBest">
+        <div>
+          <div class="route-card-title">권장 치료 경로</div>
+          <div class="route-card-desc" id="routeBest">동네 의원에서 초진 → 필요 시 전문 병원 소견서 → 검사·처치 순서로 진행하면 진료의 연속성이 유지되고 중복 검사를 줄일 수 있습니다.</div>
+          <span class="route-tag best">최적 경로</span>
+        </div>
+      </div>
+      <div class="route-card" onclick="selectRoute('fast')" id="routeCardFast">
+        <div>
+          <div class="route-card-title">빠른 진료 경로</div>
+          <div class="route-card-desc" id="routeFast">전문 병원에 직접 방문하여 당일 진단과 검사를 한 번에 진행합니다. 시간이 촉박하거나 증상이 빠르게 진행될 때 고려할 수 있습니다.</div>
+          <span class="route-tag fast">빠른 경로</span>
+        </div>
+      </div>
+      <div class="route-card" onclick="selectRoute('cheap')" id="routeCardCheap">
+        <div>
+          <div class="route-card-title">의료비 부담 완화 경로</div>
+          <div class="route-card-desc" id="routeCheap">1차 의원 방문 → 진단 후 꼭 필요한 검사만 진행 → 약 처방으로 마무리하는 경로입니다. 불필요한 정밀 검사를 줄여 본인 부담금을 최소화할 수 있습니다.</div>
+          <span class="route-tag cheap">최저 비용</span>
+        </div>
+      </div>
+      <div class="route-card" onclick="selectRoute('pro')" id="routeCardPro">
+        <div>
+          <div class="route-card-title">전문 진료 경로</div>
+          <div class="route-card-desc" id="routePro">의원 소견서를 받아 대학 병원의 전문과로 의뢰하는 경로입니다. 복잡한 질환, 수술 가능성이 있을 때 적합합니다.</div>
+          <span class="route-tag specialist-route">전문 경로</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비용 안내 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div>
+        <div class="card-title">비용</div>
+        <div class="card-sub">심평원 주부상병별 진료 통계·수술별 진료비 데이터를 기반으로 비용 부담을 안내합니다</div>
+      </div>
+    </div>
+
+    <div style="font-size:14px;font-weight:700;color:var(--text-mid);margin-bottom:6px;">예상 본인 부담금</div>
+    <div style="font-size:13px;color:var(--text-light);margin-bottom:14px;">총 비용 범위 <span id="costTotal" style="font-size:15px;font-weight:700;color:var(--accent);margin-left:6px;">치료 경로를 선택하세요</span></div>
+    <div class="cost-flow" id="costFlow" style="display:none;">
+      <div class="cost-step">
+        <div class="cost-step-box">
+          <div class="cost-step-name">1차 진료</div>
+          <div class="cost-step-amount" id="cf-1">-</div>
+          <div class="cost-step-insure" id="cf-1-desc">실비 청구 가능</div>
+        </div>
+      </div>
+      <div class="cost-arrow">→</div>
+      <div class="cost-step">
+        <div class="cost-step-box">
+          <div class="cost-step-name">검사</div>
+          <div class="cost-step-amount" id="cf-2">-</div>
+          <div class="cost-step-insure" id="cf-2-desc">검사 항목</div>
+        </div>
+      </div>
+      <div class="cost-arrow">→</div>
+      <div class="cost-step">
+        <div class="cost-step-box">
+          <div class="cost-step-name">치료·처치</div>
+          <div class="cost-step-amount" id="cf-3">-</div>
+          <div class="cost-step-insure" id="cf-3-desc">치료 내용</div>
+        </div>
+      </div>
+      <div class="cost-arrow">→</div>
+      <div class="cost-step">
+        <div class="cost-step-box">
+          <div class="cost-step-name">입원 (필요 시)</div>
+          <div class="cost-step-amount" id="cf-4">200,000~500,000원/일</div>
+          <div class="cost-step-insure">실비 청구 가능</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비교 표 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-num"></div>
+      <div>
+        <div class="card-title">비교 표</div>
+      </div>
+    </div>
+    <table class="compare-table">
+      <thead>
+        <tr><th>경로</th><th>예상 비용</th><th>진료 속도</th><th>적합한 경우</th></tr>
+      </thead>
+      <tbody id="routeCompareBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 실비 청구 안내 -->
+  <div class="card">
+    <div class="insure-card" style="background:#fff;border:1px solid #fff;">
+      <div class="insure-title">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px;"></div>
+        실비 청구 안내
+      </div>
+      <div class="insure-grid">
+        <div class="insure-item">
+          <div class="insure-item-label">외래 진료비</div>
+          <div class="insure-item-value">본인부담 후 청구</div>
+        </div>
+        <div class="insure-item">
+          <div class="insure-item-label">입원비</div>
+          <div class="insure-item-value">보험 조건 조회 후 안내</div>
+        </div>
+        <div class="insure-item">
+          <div class="insure-item-label">수술·시술</div>
+          <div class="insure-item-value">급여 항목 청구 가능</div>
+        </div>
+        <div class="insure-item">
+          <div class="insure-item-label">비급여 항목</div>
+          <div class="insure-item-value">특약 유무 확인 필요</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-light);margin-top:12px;line-height:1.7;">
+        진료 완료 후 영수증과 진료 결과를 업로드하면, 가입 보험 조회 결과를 바탕으로 해당 질병·진료 항목이 실비 청구 대상인지 확인해줍니다.
+      </div>
+      <div class="receipt-upload-grid">
+        <label class="mini-upload">
+          <input type="file" id="receiptFile" accept="image/*,.pdf" onchange="handleClaimUpload()">
+          <div class="mini-upload-title">진료비 영수증 업로드</div>
+          <div class="mini-upload-desc" id="receiptFileName">JPG, PNG, PDF</div>
+        </label>
+        <label class="mini-upload">
+          <input type="file" id="resultFile" accept="image/*,.pdf" onchange="handleClaimUpload()">
+          <div class="mini-upload-title">진료 결과 업로드</div>
+          <div class="mini-upload-desc" id="resultFileName">진단서, 처방전, 검사 결과 등</div>
+        </label>
+      </div>
+      <div class="claim-action-row">
+        <button type="button" class="claim-action-btn" onclick="connectNHIS()">건강보험공단 연결</button>
+        <button type="button" class="claim-action-btn" onclick="connectInsurer()">보험사 연결</button>
+        <button type="button" class="claim-action-btn primary" onclick="checkInsuranceClaim()">실비 청구 확인</button>
+      </div>
+      <div class="insurance-result" id="insuranceResult" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    <div>* MediRoute는 진단·처방이 아니라 의료기관 선택을 돕는 정보 안내 서비스입니다.<br>
+    * 비용 정보는 HIRA 공개 통계를 기반으로 한 참고 수준이며 실제와 다를 수 있습니다.<br>
+    * 정확한 비용은 의료기관에 진료를 받아 확인하시기 바랍니다.</div>
+  </div>
+
+  <div class="nav-btns">
+    <button class="btn-back" onclick="goStep(3)">← 이전으로</button>
+    <button class="btn-next" onclick="goStep(1)">다음으로 →</button>
+  </div>
+</div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ STATE ═══
+let state = {
+  symptom: '',
+  areas: [],
+  age: '',
+  gender: '',
+  region: '',
+  duration: '',
+  meds: '',
+  disease: '',
+  checks: [],
+  isUrgent: false,
+  dept1: '', dept2: '', dept3: '',
+  imageUploaded: false,
+  nearbyHospitals: [],
+  selectedHospType: '전체',
+  selectedRoute: 'best'
+};
+
+// ═══ STEP NAVIGATION ═══
+function goStep(n) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.step-btn').forEach((b,i) => {
+    b.classList.remove('active');
+    if(i+1 < n) b.classList.add('done');
+    else b.classList.remove('done');
+  });
+  document.getElementById('page-'+n).classList.add('active');
+  document.getElementById('snav-'+n).classList.add('active');
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(n === 4) { setTimeout(() => selectRoute('best'), 100); }
+}
+
+// ═══ BODY AREA TOGGLE ═══
+function toggleArea(el, name) {
+  el.classList.toggle('selected');
+  const idx = state.areas.indexOf(name);
+  if(idx === -1) state.areas.push(name);
+  else state.areas.splice(idx, 1);
+}
+
+// ═══ QUICK TAGS ═══
+function getSymptomParts() {
+  const ta = document.getElementById('symptomText');
+  return ta.value
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function setSymptomParts(parts) {
+  document.getElementById('symptomText').value = [...new Set(parts)].join(', ');
+  syncQuickTagsFromText();
+}
+
+function addSymptomToken(text) {
+  const parts = getSymptomParts();
+  if(!parts.includes(text)) parts.push(text);
+  setSymptomParts(parts);
+}
+
+function removeSymptomToken(text) {
+  const parts = getSymptomParts().filter(v => v !== text);
+  setSymptomParts(parts);
+}
+
+function syncQuickTagsFromText() {
+  const value = document.getElementById('symptomText').value;
+  document.querySelectorAll('#quickTags .tag').forEach(tag => {
+    const text = tag.textContent.trim();
+    tag.classList.toggle('selected', value.includes(text));
+  });
+}
+
+function addQuickTag(el, text) {
+  const isAlreadySelected = el.classList.contains('selected');
+  if(isAlreadySelected) removeSymptomToken(text);
+  else addSymptomToken(text);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('symptomText');
+  if(ta) ta.addEventListener('input', syncQuickTagsFromText);
+});
+
+// ═══ CHECK ITEMS ═══
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+  const label = el.querySelector('.check-label').textContent;
+  const isWarn = el.classList.contains('warn-item');
+  const idx = state.checks.indexOf(label);
+  if(idx === -1) { state.checks.push(label); if(isWarn) state.isUrgent = true; }
+  else state.checks.splice(idx, 1);
+  // re-check urgency
+  state.isUrgent = [...document.querySelectorAll('.warn-item.checked')].length > 0;
+}
+
+// ═══ MIC / SPEECH ═══
+let recognition = null;
+function toggleMic() {
+  const btn = document.getElementById('micBtn');
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('이 브라우저는 음성 인식을 지원하지 않습니다');
+    return;
+  }
+  if(recognition) {
+    recognition.stop(); recognition = null;
+    btn.classList.remove('listening');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'ko-KR';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  btn.classList.add('listening');
+  recognition.onresult = (e) => {
+    let t = '';
+    for(let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+    const ta = document.getElementById('symptomText');
+    ta.value = ta.value + t;
+  };
+  recognition.onend = () => { btn.classList.remove('listening'); recognition = null; };
+  recognition.start();
+}
+
+// ═══ IMAGE UPLOAD ═══
+function handleImageUpload(e) {
+  const files = Array.from(e.target.files || []);
+  if(files.length === 0) return;
+
+  const list = document.getElementById('uploadPreviewList');
+  if(!list) return;
+  list.innerHTML = '';
+  state.uploadedImages = [];
+
+  files.forEach((file) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      state.uploadedImages.push({ name: file.name, src: ev.target.result });
+
+      const item = document.createElement('div');
+      item.className = 'upload-preview-item';
+      item.innerHTML = `
+        <img src="${ev.target.result}" alt="첨부 이미지">
+        <div class="upload-preview-name">${escapeHtml(file.name)}</div>
+      `;
+      list.appendChild(item);
+      list.style.display = 'grid';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  state.imageUploaded = true;
+  document.getElementById('imgDeleteBtn').style.display = 'inline-block';
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('photoDateWrap').style.display = 'block';
+  showImageCandidates();
+}
+
+function removeUploadedImages() {
+  const list = document.getElementById('uploadPreviewList');
+  list.innerHTML = '';
+  list.style.display = 'none';
+  document.getElementById('imgDeleteBtn').style.display = 'none';
+  document.getElementById('uploadZone').style.display = 'block';
+  document.getElementById('imageInput').value = '';
+  document.getElementById('imgCandidates').style.display = 'none';
+  document.getElementById('photoDateWrap').style.display = 'none';
+  document.getElementById('photoDate').value = '';
+  state.uploadedImages = [];
+  state.imageUploaded = false;
+  showToast('사진이 삭제되었습니다');
+}
+
+function showImageCandidates() {
+  const box = document.getElementById('imgCandidates');
+  const tagsEl = document.getElementById('imgCandTags');
+  tagsEl.innerHTML = '';
+
+  // 선택된 부위에 따라 관련 증상 후보를 다르게 표시
+  const areas = (state.areas || []).join(' ');
+  let candidates = [];
+
+  if(areas.includes('피부') || areas.includes('얼굴')) {
+    candidates = ['피부 발진', '붓기·부종', '발적·홍반', '각질·건조증', '농포·여드름', '색소 변화', '가려움', '두드러기'];
+  } else if(areas.includes('무릎') || areas.includes('발목') || areas.includes('어깨') || areas.includes('손목')) {
+    candidates = ['붓기·부종', '발적·열감', '멍·변색', '변형·비대칭', '운동 제한', '상처·찰과상'];
+  } else if(areas.includes('눈')) {
+    candidates = ['충혈', '부종', '분비물', '눈꺼풀 이상', '시야 변화'];
+  } else if(areas.includes('입') || areas.includes('턱') || areas.includes('목')) {
+    candidates = ['붓기·부종', '발적·홍반', '분비물', '궤양·병변', '삼킴 곤란'];
+  } else if(areas.includes('배') || areas.includes('옆구리')) {
+    candidates = ['복부 팽만', '압통 부위', '발적·열감', '상처', '탈장 의심'];
+  } else if(areas.includes('가슴') || areas.includes('유방')) {
+    candidates = ['붓기·부종', '발적·홍반', '피부 변화', '분비물', '비대칭'];
+  } else if(areas.includes('등') || areas.includes('허리')) {
+    candidates = ['붓기·부종', '발적·열감', '자세 비대칭', '타박 흔적', '피부 발진'];
+  } else {
+    candidates = ['붓기·부종', '발적·홍반', '분비물', '상처·찰과상', '변색·멍', '피부 발진', '각질·건조증', '농포·여드름'];
+  }
+
+  candidates.forEach(c => {
+    const t = document.createElement('div');
+    t.className = 'img-cand-tag';
+    t.textContent = c;
+    t.onclick = () => {
+      addSymptomToken(c);
+      showToast(c + ' 추가됨');
+    };
+    tagsEl.appendChild(t);
+  });
+  box.style.display = 'block';
+}
+
+// ═══ ANALYZE ═══
+async function analyze() {
+  state.symptom = document.getElementById('symptomText').value;
+  state.age = document.getElementById('age').value;
+  state.gender = document.getElementById('gender').value;
+  // 지역: 직접입력 우선, 없으면 선택값 조합
+  const direct = document.getElementById('region-direct').value.trim();
+  const sido = document.getElementById('region-sido').value;
+  const sigungu = document.getElementById('region-sigungu').value;
+  const dong = document.getElementById('region-dong').value;
+  state.region = direct || [sido, sigungu, dong].filter(Boolean).join(' ') || '';
+  state.duration = document.getElementById('duration').value || document.getElementById('durationText').value;
+  state.meds = document.getElementById('meds').value;
+  state.disease = document.getElementById('disease').value;
+
+  if(!state.symptom && state.areas.length === 0) {
+    showToast('증상을 입력하거나 부위를 선택해 주세요');
+    return;
+  }
+
+  document.getElementById('page-1').classList.remove('active');
+  document.getElementById('loading').style.display = 'block';
+  window.scrollTo({top:0, behavior:'smooth'});
+
+  try {
+    const result = await callClaude();
+    applyResult(result);
+  } catch(err) {
+    applyFallback();
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  goStep(2);
+}
+
+// ── 백엔드 API URL (Render 배포) ──
+const API_BASE_URL = 'https://mediroute-xrgu.onrender.com';
+
+// ── GPS 좌표 수집 ──
+let userLat = null;
+let userLng = null;
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => { userLat = pos.coords.latitude; userLng = pos.coords.longitude; },
+    () => {},
+    { enableHighAccuracy: true, timeout: 5000 }
+  );
+}
+
+async function callClaude() {
+  const resp = await fetch(`${API_BASE_URL}/api/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      symptom: state.symptom || '',
+      areas: state.areas || [],
+      age: state.age || '',
+      gender: state.gender || '',
+      region: state.region || '',
+      duration: state.duration || '',
+      meds: state.meds || '',
+      disease: state.disease || '',
+      checks: state.checks || [],
+      is_urgent: state.isUrgent || false,
+      lat: userLat,
+      lng: userLng
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.detail || `서버 오류 (${resp.status})`);
+  }
+
+  return await resp.json();
+}
+
+function applyResult(r) {
+  // emergency
+  document.getElementById('emergencyBanner').style.display = (r.isUrgent || state.isUrgent) ? 'flex' : 'none';
+
+  // summary
+  document.getElementById('as-area').textContent = r.areaText || state.areas.join(', ') || '—';
+  document.getElementById('as-symptom').textContent = r.symptomText || state.symptom.slice(0,20) || '—';
+  document.getElementById('as-duration').textContent = state.duration || '—';
+  const urg = r.urgencyText || (state.isUrgent ? '높음' : '낮음');
+  const urgEl = document.getElementById('as-urgency');
+  const urgMap = {'낮음': '일반 진료 권장', '보통': '빠른 진료 권장', '높음': '즉시 진료 또는 응급 평가 권장'};
+  urgEl.textContent = urgMap[urg] || urg;
+  urgEl.style.color = urg === '높음' ? 'var(--warn)' : urg === '보통' ? '#D69E2E' : 'var(--accent2)';
+
+  // depts
+  const deptList = document.getElementById('deptList');
+  const ranks = ['r1','r2','r3'];
+  const depts = [r.dept1, r.dept2, r.dept3];
+  deptList.innerHTML = '';
+  depts.forEach((d,i) => {
+    if(!d) return;
+    if(i === 0) state.dept1 = d.name;
+    if(i === 1) state.dept2 = d.name;
+    if(i === 2) state.dept3 = d.name;
+    deptList.innerHTML += `
+      <div class="dept-card" onclick="selectDeptCard(this, '${escapeAttr(d.name)}')" title="관련 병원 보기">
+        <div class="dept-rank ${ranks[i]}">${i+1}</div>
+        <div>
+          <div class="dept-name">${escapeHtml(d.name)}</div>
+          <div class="dept-reason">${escapeHtml(d.reason)}</div>
+        </div>
+      </div>`;
+  });
+
+  // hosp guide
+  if(r.hospGuide) document.getElementById('hospGuide').textContent = r.hospGuide;
+
+  renderDiseaseList(r.predictedDiseases);
+
+  // nearby: GPS 거리순 정렬 후 표시
+  state.nearbyHospitals = normalizeHospitals(r.nearbyHospitals || []);
+  resetHospitalList('병원 안내에서 동네 의원·전문 병원·대학 병원을 클릭하거나 추천 진료과를 클릭하면 관련 병원이 GPS 거리순으로 표시됩니다.');
+
+  // memo
+  const memoSymptoms = document.getElementById('memoSymptoms');
+  memoSymptoms.innerHTML = '';
+  [
+    `증상: ${state.symptom || state.areas.join(', ')}`,
+    `시작일: ${state.duration || '알 수 없음'}`,
+    `나이·성별: ${state.age || '?'}세 ${state.gender || ''}`,
+    state.meds ? `복용약: ${state.meds}` : null,
+    state.disease ? `기저질환: ${state.disease}` : null
+  ].filter(Boolean).forEach(s => { memoSymptoms.innerHTML += `<li>${s}</li>`; });
+
+  const memoSay = document.getElementById('memoSay');
+  memoSay.innerHTML = (r.memoSay || ['증상 시작일','통증 위치 및 강도','복용 중인 약','기저질환 여부']).map(s => `<li>${s}</li>`).join('');
+
+  const memoAsk = document.getElementById('memoAsk');
+  memoAsk.innerHTML = (r.memoAsk || ['어떤 검사가 필요한가요?','치료 기간이 얼마나 걸리나요?','재발 방지를 위해 주의할 점이 있나요?']).map(s => `<li>${s}</li>`).join('');
+
+  // cost
+  if(r.costClinic) document.getElementById('cf-1').textContent = r.costClinic;
+  if(r.costTest) document.getElementById('cf-2').textContent = r.costTest;
+  if(r.costTreat) document.getElementById('cf-3').textContent = r.costTreat;
+  if(r.costInpat) document.getElementById('cf-4').textContent = r.costInpat;
+  updateCostTotal();
+
+  // routes
+  if(r.routeBest) document.getElementById('routeBest').textContent = r.routeBest;
+  if(r.routeFast) document.getElementById('routeFast').textContent = r.routeFast;
+  if(r.routeCheap) document.getElementById('routeCheap').textContent = r.routeCheap;
+  if(r.routePro) document.getElementById('routePro').textContent = r.routePro;
+}
+
+function applyFallback() {
+  document.getElementById('as-area').textContent = state.areas.join(', ') || '미선택';
+  document.getElementById('as-symptom').textContent = state.symptom.slice(0,20) || '—';
+  document.getElementById('as-duration').textContent = state.duration || '—';
+  document.getElementById('emergencyBanner').style.display = state.isUrgent ? 'flex' : 'none';
+  const urgEl = document.getElementById('as-urgency');
+  urgEl.textContent = state.isUrgent ? '높음' : '낮음';
+  urgEl.style.color = state.isUrgent ? 'var(--warn)' : 'var(--accent2)';
+
+  const deptList = document.getElementById('deptList');
+  const area = state.areas[0] || '';
+  let depts = [
+    {name:'내과', reason:'전신 증상, 발열, 피로감 확인 가능'},
+    {name:'외과', reason:'통증·부종 원인 확인 가능'},
+    {name:'가정의학과', reason:'종합 초진 및 의뢰 가능'}
+  ];
+  if(area.includes('머리')) depts = [{name:'신경과',reason:'두통·어지러움 확인'},{name:'이비인후과',reason:'귀·코·목 연관 증상'},{name:'내과',reason:'전신 감염 확인'}];
+  if(area.includes('목') || area.includes('귀') || area.includes('코')) depts = [{name:'이비인후과',reason:'귀·코·목 전문 진료'},{name:'내과',reason:'감염·발열 동반 확인'},{name:'가정의학과',reason:'초진 및 의뢰'}];
+  if(area.includes('피부')) depts = [{name:'피부과',reason:'피부 병변 전문 진단'},{name:'알레르기내과',reason:'알레르기 반응 확인'},{name:'가정의학과',reason:'초진 및 의뢰'}];
+
+  state.dept1 = depts[0]?.name || '';
+  state.dept2 = depts[1]?.name || '';
+  state.dept3 = depts[2]?.name || '';
+  deptList.innerHTML = depts.map((d,i) => `
+    <div class="dept-card" onclick="selectDeptCard(this, '${escapeAttr(d.name)}')" title="관련 병원 보기">
+      <div class="dept-rank ${i===1?'r2':i===2?'r3':''}">${i+1}</div>
+      <div><div class="dept-name">${escapeHtml(d.name)}</div><div class="dept-reason">${escapeHtml(d.reason)}</div></div>
+    </div>`).join('');
+
+  renderDiseaseList(getFallbackDiseases(area));
+
+  const reg = state.region || '대전';
+  state.nearbyHospitals = normalizeHospitals([
+    {name: `${reg} 가까운 의원`, type: '의원', dept: depts[0]?.name || '가정의학과', address: reg, hours: '평일 주간 (9:00~18:00)', fit: '초기 상담과 기본 진료에 적합', distanceKm: 0.6},
+    {name: `${reg} 전문병원`, type: '전문병원', dept: depts[0]?.name || '전문 진료', address: reg, hours: '평일 (9:00~17:00)', fit: '전공의가 있는 특정 과 전문 진료', distanceKm: 1.8},
+    {name: `${reg} 대학병원`, type: '대학병원', dept: depts[0]?.name || '전문 진료', address: reg, hours: '평일 (8:30~17:00)', fit: '수술·정밀검사 필요 시 이용', distanceKm: 3.7}
+  ]);
+  resetHospitalList('병원 안내에서 동네 의원·전문 병원·대학 병원을 클릭하거나 추천 진료과를 클릭하면 관련 병원이 GPS 거리순으로 표시됩니다.');
+
+  const memoSay = document.getElementById('memoSay');
+  memoSay.innerHTML = ['증상 시작일','통증 위치와 강도','분비물 색과 양 (해당 시)','발열 여부 및 체온','복용 중인 약 이름','식사 시 증상 변화'].map(s=>`<li>${s}</li>`).join('');
+
+  const memoAsk = document.getElementById('memoAsk');
+  memoAsk.innerHTML = ['어떤 검사가 필요한가요?','처방 약을 먹어야 하는 기간은?','재발 방지를 위한 생활 주의사항은?','추가 진료가 필요한 시점은 언제인가요?'].map(s=>`<li>${s}</li>`).join('');
+
+  const memoSymptoms = document.getElementById('memoSymptoms');
+  memoSymptoms.innerHTML = [
+    `증상: ${state.symptom || state.areas.join(', ')}`,
+    `시작일: ${state.duration || '알 수 없음'}`,
+    `나이·성별: ${state.age || '?'}세 ${state.gender || ''}`,
+    state.meds ? `복용약: ${state.meds}` : null
+  ].filter(Boolean).map(s=>`<li>${s}</li>`).join('');
+
+  updateCostTotal();
+}
+
+
+// ═══ ADDED: DISEASE / HOSPITAL / ROUTE HELPERS ═══
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+}
+function escapeAttr(v) {
+  return String(v ?? '').replace(/[\'\\]/g, ch => ({"'":"&#39;","\\":"\\\\"}[ch]));
+}
+
+function renderDiseaseList(list) {
+  const el = document.getElementById('diseaseList');
+  if(!el) return;
+  const items = (list && list.length ? list : getFallbackDiseases(state.areas[0] || '')).slice(0, 5);
+  el.innerHTML = items.map((d, i) => `
+    <div class="disease-item">
+      <div class="disease-rank">${i + 1}</div>
+      <div>
+        <div class="disease-name">${escapeHtml(d.name || d)}</div>
+        <div class="disease-desc">${escapeHtml(d.reason || '입력 증상과 부위를 기준으로 예상되는 항목입니다')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getFallbackDiseases(area) {
+  if((area || '').includes('목') || (area || '').includes('귀') || (area || '').includes('코')) {
+    return [
+      {name:'상기도 감염 또는 인후염', reason:'목·코 증상과 분비물 동반 가능'},
+      {name:'비염 또는 부비동염', reason:'콧물·가래·후비루 증상 가능'},
+      {name:'중이염·이관 기능 이상', reason:'귀 불편감이 함께 있을 때 확인'}
+    ];
+  }
+  if((area || '').includes('턱') || (area || '').includes('침샘')) {
+    return [
+      {name:'침샘염', reason:'턱 밑 붓기와 분비물 증상 가능'},
+      {name:'타석증', reason:'식사 시 통증·부종이 반복될 때 확인'},
+      {name:'구강·인후 감염', reason:'입안·목 주변 염증 동반 가능'}
+    ];
+  }
+  if((area || '').includes('피부')) {
+    return [
+      {name:'접촉성 피부염', reason:'발진·가려움이 있을 때 확인'},
+      {name:'두드러기', reason:'갑작스러운 팽진·가려움 가능'},
+      {name:'피부 감염', reason:'붓기·열감·분비물 동반 가능'}
+    ];
+  }
+  return [
+    {name:'감염성 질환 가능성', reason:'발열·통증·분비물 여부 확인 필요'},
+    {name:'염증성 질환 가능성', reason:'부종·통증·기능 저하 여부 확인'},
+    {name:'일반 초진 필요 증상', reason:'의료진 문진 후 진료과 확정 필요'}
+  ];
+}
+
+function normalizeHospitals(list) {
+  return (list || []).map((h, i) => ({
+    name: h.name || `주변 의료기관 ${i + 1}`,
+    type: h.type || '의원',
+    dept: h.dept || state.dept1 || '진료과',
+    address: h.address || state.region || '현재 위치 주변',
+    hours: h.hours || '진료시간 확인 필요',
+    fit: h.fit || '입력 증상 기준 방문 후보',
+    distanceKm: Number(h.distanceKm ?? h.distance ?? (i + 1) * 0.8)
+  })).sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+
+function normalizeDeptName(dept) {
+  const d = String(dept || '').replace(/\s+/g, '');
+  if(d.includes('비뇨')) return '비뇨의학과';
+  if(d.includes('이비인후')) return '이비인후과';
+  if(d.includes('피부')) return '피부과';
+  if(d.includes('신경')) return '신경과';
+  if(d.includes('정형')) return '정형외과';
+  if(d.includes('안과')) return '안과';
+  if(d.includes('치과') || d.includes('구강')) return '치과';
+  if(d.includes('산부')) return '산부인과';
+  if(d.includes('소아')) return '소아청소년과';
+  if(d.includes('정신')) return '정신건강의학과';
+  if(d.includes('재활')) return '재활의학과';
+  if(d.includes('항문') || d.includes('대장')) return '항문외과';
+  if(d.includes('알레르기')) return '알레르기내과';
+  if(d.includes('소화기')) return '소화기내과';
+  if(d.includes('호흡기')) return '호흡기내과';
+  if(d.includes('심장') || d.includes('순환기')) return '심장내과';
+  if(d.includes('외과')) return '외과';
+  if(d.includes('가정')) return '가정의학과';
+  if(d.includes('내과')) return '내과';
+  return dept || '가정의학과';
+}
+
+function makeHospitalName(dept, type, idx) {
+  const d = normalizeDeptName(dept);
+  const n = Number(idx || 0);
+  const pools = {
+    '비뇨의학과': ['역삼비뇨의학과의원','강남비뇨의학과클리닉','선릉비뇨의학과메디컬의원','테헤란비뇨의학과365의원','더편한비뇨의학과의원'],
+    '이비인후과': ['역삼이비인후과의원','강남코숨이비인후과의원','선릉서울이비인후과의원','테헤란이비인후과의원','맑은소리이비인후과의원'],
+    '피부과': ['역삼맑은피부과의원','강남더봄피부과의원','선릉스킨피부과의원','테헤란피부과의원','서울피부클리닉'],
+    '내과': ['역삼서울내과의원','강남튼튼내과의원','선릉연세내과의원','테헤란속편한내과의원','더건강내과의원'],
+    '외과': ['역삼서울외과의원','강남튼튼외과의원','선릉외과의원','테헤란외과의원','바른외과의원'],
+    '가정의학과': ['역삼가정의학과의원','강남365가정의학과의원','선릉우리의원','테헤란가정의학과의원','서울주치의의원'],
+    '신경과': ['역삼신경과의원','강남서울신경과의원','선릉두뇌신경과의원','테헤란신경과의원','맑은신경과의원'],
+    '정형외과': ['역삼정형외과의원','강남튼튼정형외과의원','선릉바른정형외과의원','테헤란정형외과의원','서울관절정형외과의원'],
+    '안과': ['역삼밝은안과의원','강남서울안과의원','선릉아이안과의원','테헤란안과의원','맑은눈안과의원'],
+    '치과': ['역삼서울치과의원','강남바른치과의원','선릉스마일치과의원','테헤란치과의원','서울구강치과의원'],
+    '산부인과': ['역삼여성산부인과의원','강남서울산부인과의원','선릉여성의원','테헤란산부인과의원','더편한산부인과의원'],
+    '소아청소년과': ['역삼소아청소년과의원','강남아이소아청소년과의원','선릉소아과의원','테헤란소아청소년과의원','서울아이의원'],
+    '정신건강의학과': ['역삼마음정신건강의학과의원','강남서울정신건강의학과의원','선릉마인드의원','테헤란정신건강의학과의원','마음숲의원'],
+    '재활의학과': ['역삼재활의학과의원','강남튼튼재활의학과의원','선릉재활의학과의원','테헤란재활의학과의원','서울재활클리닉'],
+    '항문외과': ['역삼항문외과의원','강남대장항문외과의원','선릉항문외과의원','테헤란대장항문외과의원','서울항문외과의원'],
+    '알레르기내과': ['역삼알레르기내과의원','강남숨편한알레르기내과의원','선릉알레르기클리닉','테헤란알레르기내과의원','서울알레르기내과의원'],
+    '소화기내과': ['역삼속편한내과의원','강남소화기내과의원','선릉위장내과의원','테헤란소화기내과의원','서울위편한내과의원'],
+    '호흡기내과': ['역삼숨편한내과의원','강남호흡기내과의원','선릉호흡기클리닉','테헤란호흡기내과의원','서울숨내과의원'],
+    '심장내과': ['역삼심장내과의원','강남순환기내과의원','선릉심혈관내과의원','테헤란심장내과의원','서울심장내과의원']
+  };
+  if(type === '대학병원') {
+    const univ = ['서울중앙대학교병원','강남세브란스병원','서울대학교병원 강남센터','삼성서울병원','서울아산병원'];
+    return univ[n % univ.length];
+  }
+  if(type === '전문병원') {
+    const base = d.replace('과', '');
+    const spec = [`강남${base}전문병원`, `서울${base}센터`, `선릉${base}전문클리닉`, `테헤란${base}메디컬센터`, `더좋은${base}전문병원`];
+    return spec[n % spec.length];
+  }
+  const pool = pools[d] || [`역삼${d}의원`, `강남${d}의원`, `선릉${d}의원`, `테헤란${d}의원`, `서울${d}의원`];
+  return pool[n % pool.length];
+}
+
+function resetHospitalList(message) {
+  document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+  const nb = document.getElementById('hospNearby');
+  if(!nb) return;
+  nb.innerHTML = `
+    <div class="hosp-empty" style="padding:18px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--text-mid);">
+      ${escapeHtml(message || '병원 안내 또는 추천 진료과를 클릭하면 관련 병원이 표시됩니다.')}
+    </div>`;
+}
+
+function renderHospitalItems(list, emptyMessage) {
+  const nb = document.getElementById('hospNearby');
+  if(!nb) return;
+
+  if(!list || list.length === 0) {
+    nb.innerHTML = `
+      <div class="hosp-empty" style="padding:18px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--text-mid);">
+        ${escapeHtml(emptyMessage || '조건에 맞는 병원 데이터가 없습니다.')}
+      </div>`;
+    return;
+  }
+
+  // 병원명을 카드가 아니라 번호가 붙은 list 형태로 표시합니다.
+  nb.innerHTML = `
+    <ol class="hospital-name-list" style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;">
+      ${list.map((h, i) => {
+        const typeLabel = h.type === '의원' ? '1차 진료' : h.type === '전문병원' ? '전문 진료' : '3차 진료';
+        const typeClass = h.type === '의원' ? 'badge-clinic' : h.type === '전문병원' ? 'badge-specialist' : 'badge-uni';
+        const displayName = h.name || `주변 의료기관 ${i + 1}`;
+        const meta = [
+          h.type,
+          h.dept,
+          h.address
+        ].filter(Boolean).map(escapeHtml).join(' · ');
+
+        return `
+          <li class="hospital-name-list-item"
+              onclick="openNaverMap('${escapeAttr(displayName)}','${escapeAttr(h.address || '')}')"
+              style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;">
+            <div style="min-width:28px;font-size:14px;font-weight:700;color:var(--accent);line-height:1.5;">${i + 1}.</div>
+            <div style="flex:1;min-width:0;">
+              <div class="hosp-name" style="font-size:15px;font-weight:800;color:var(--text);line-height:1.45;">
+                ${escapeHtml(displayName)}
+              </div>
+              <div class="hosp-meta" style="font-size:12px;color:var(--text-light);margin-top:3px;">
+                ${meta || '의료기관 정보 확인 필요'}
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+                <span class="hosp-type-badge ${typeClass}">${typeLabel}</span>
+                <span style="font-size:12px;color:var(--accent2);font-weight:600;">${escapeHtml(h.hours || '진료시간 확인 필요')}</span>
+                <span style="font-size:12px;color:var(--accent);font-weight:700;">약 ${Number(h.distanceKm || 0).toFixed(1)}km</span>
+              </div>
+            </div>
+          </li>`;
+      }).join('')}
+    </ol>`;
+}
+
+function filterHospitals(type, silent=false) {
+  state.selectedHospType = type;
+  document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+  if(type === '의원') document.getElementById('hl-clinic')?.classList.add('recommended');
+  else if(type === '전문병원') document.getElementById('hl-specialist')?.classList.add('recommended');
+  else if(type === '대학병원') document.getElementById('hl-university')?.classList.add('recommended');
+
+  const dept = state.selectedDept || state.dept1 || '';
+  const guide = document.getElementById('hospGuide');
+  if(guide) guide.textContent = dept ? `${dept} ${type} 목록을 GPS 거리순으로 표시합니다.` : `${type} 목록을 GPS 거리순으로 표시합니다.`;
+
+  let list = (state.nearbyHospitals || [])
+    .filter(h => h.type === type && (!dept || String(h.dept||'').includes(dept) || dept.includes(String(h.dept||''))))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  // 실제 데이터가 부족하면 예시 병원 생성 (최대 5개까지)
+  if(list.length < 5 && dept) {
+    const reg = state.region || '현재 위치 주변';
+    const baseKm = type === '의원' ? 0.4 : type === '전문병원' ? 1.5 : 3.0;
+    const hrs = type === '의원' ? '평일 주간 (9:00~18:00)' : type === '전문병원' ? '평일 (9:00~17:00)' : '평일 (8:30~17:00)';
+    const fitText = type === '의원' ? '관련 1차 진료' : type === '전문병원' ? '전문 진료' : '정밀검사·협진 필요 시 이용';
+    for(let i = list.length; i < 5; i++) {
+      const km = Math.round((baseKm + i * 0.8) * 10) / 10;
+      list.push({ name: makeHospitalName(dept, type, i), type, dept, address: reg, hours: hrs, fit: `${dept} ${fitText}`, distanceKm: km });
+    }
+  }
+
+  renderHospitalItems(list.slice(0,5), `${type}에 해당하는 병원 데이터가 없습니다.`);
+  if(!silent) showToast(`${dept ? dept+' ' : ''}${type} 목록 표시`);
+}
+
+
+function selectDeptCard(el, dept) {
+  document.querySelectorAll('.dept-card').forEach(card => card.classList.remove('selected-dept'));
+  if(el) el.classList.add('selected-dept');
+  state.selectedDept = dept;
+  const guide = document.getElementById('hospGuide');
+  if(guide) guide.textContent = `${dept} 선택됨 — 위 병원 안내에서 동네 의원, 전문 병원, 대학 병원을 선택하세요.`;
+  const nb = document.getElementById('hospNearby');
+  if(nb) nb.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-light);font-size:13px;">위 병원 안내에서 동네 의원, 전문 병원, 대학 병원 중 하나를 선택하세요.</div>';
+}
+
+function buildDeptHospitals(dept) {
+  const reg = state.region || '서울 강남구';
+  return [
+    {name: makeHospitalName(dept, '의원', 0), type: '의원', dept, address: reg, hours: '평일 주간 (9:00~18:00)', fit: `${dept} 관련 1차 진료`, distanceKm: 0.6},
+    {name: makeHospitalName(dept, '전문병원', 1), type: '전문병원', dept, address: reg, hours: '평일 (9:00~17:00)', fit: `${dept} 전문 진료`, distanceKm: 1.8},
+    {name: makeHospitalName(dept, '대학병원', 2), type: '대학병원', dept, address: reg, hours: '평일 (8:30~17:00)', fit: `${dept} 정밀검사·협진 필요 시 이용`, distanceKm: 3.7}
+  ];
+}
+
+function filterHospitalsByDept(dept) {
+  state.selectedDept = dept;
+  document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+  const guide = document.getElementById('hospGuide');
+  if(guide) guide.textContent = `${dept} 관련 병원을 GPS 거리순으로 표시합니다.`;
+
+  let list = (state.nearbyHospitals || [])
+    .filter(h => String(h.dept || '').includes(dept) || String(dept || '').includes(h.dept))
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  // 선택한 추천 진료과와 정확히 매칭되는 병원이 없을 때도
+  // 사용자가 선택한 진료과 기준의 병원 목록이 아래에 보이도록 기본 목록을 생성합니다.
+  if(list.length === 0) {
+    list = buildDeptHospitals(dept);
+  }
+
+  renderHospitalItems(list, `${dept} 관련 병원 데이터가 없습니다. 병원 안내에서 병원급을 선택해 주세요.`);
+  showToast(`${dept} 관련 병원을 거리순으로 표시했습니다`);
+}
+
+function openNaverMap(name, address) {
+  const nameHasAddr = address && name.includes(address);
+  const q = nameHasAddr ? encodeURIComponent(name) : encodeURIComponent(`${address} ${name}`);
+  window.open(`https://map.naver.com/p/search/${q}`, '_blank');
+}
+
+const ROUTE_COSTS = {
+  best: { c1:'5,000~15,000원', c2:'20,000~80,000원', c3:'30,000~150,000원', c4:'0~0원', label:'권장 치료 경로' },
+  fast: { c1:'20,000~50,000원', c2:'80,000~250,000원', c3:'100,000~300,000원', c4:'0~300,000원/일', label:'빠른 진료 경로' },
+  cheap:{ c1:'5,000~10,000원', c2:'0~30,000원', c3:'10,000~60,000원', c4:'0~0원', label:'의료비 부담 완화 경로' },
+  pro:  { c1:'10,000~30,000원', c2:'100,000~400,000원', c3:'150,000~600,000원', c4:'200,000~500,000원/일', label:'전문 진료 경로' }
+};
+function selectRoute(key) {
+  state.selectedRoute = key;
+  document.querySelectorAll('.route-card').forEach(c => c.classList.remove('active'));
+  const id = key === 'best' ? 'routeCardBest' : key === 'fast' ? 'routeCardFast' : key === 'cheap' ? 'routeCardCheap' : 'routeCardPro';
+  document.getElementById(id)?.classList.add('active');
+
+  // 비용 영역 표시
+  document.getElementById('costFlow').style.display = 'flex';
+
+  const c = ROUTE_COSTS[key] || ROUTE_COSTS.best;
+  document.getElementById('cf-1').textContent = c.c1;
+  document.getElementById('cf-2').textContent = c.c2;
+  document.getElementById('cf-3').textContent = c.c3;
+  document.getElementById('cf-4').textContent = c.c4;
+
+  // 부위별 검사·치료 설명
+  const areaList = state.areas || [];
+  let testDesc = '혈액검사·소변검사 등';
+  let treatDesc = '약물 처방 중심';
+  if (areaList.some(a => a === '유방')) { testDesc = '유방초음파·유방촬영술 등'; treatDesc = '약물 처방·경과 관찰'; }
+  else if (areaList.some(a => a === '배·소화기')) { testDesc = '혈액검사·복부초음파 등'; treatDesc = '약물 처방·식이요법'; }
+  else if (areaList.some(a => a === '가슴·심장')) { testDesc = '심전도·흉부X-ray 등'; treatDesc = '약물·시술 가능'; }
+  else if (areaList.some(a => a === '무릎' || a === '어깨' || a === '등·허리')) { testDesc = 'X-ray·MRI 등'; treatDesc = '물리치료·주사 치료'; }
+  else if (areaList.some(a => a === '손목·손가락' || a === '팔·손')) { testDesc = 'X-ray·근전도 등'; treatDesc = '약물·보조기·물리치료'; }
+  else if (areaList.some(a => a === '발목·발가락' || a === '다리·발')) { testDesc = 'X-ray·초음파 등'; treatDesc = '부목·물리치료'; }
+  else if (areaList.some(a => a === '목·인후' || a === '귀' || a === '코')) { testDesc = '내시경·배양검사 등'; treatDesc = '약물 처방 중심'; }
+  else if (areaList.some(a => a === '눈')) { testDesc = '안저검사·시력검사 등'; treatDesc = '점안약·약물 처방'; }
+  else if (areaList.some(a => a === '머리·두피')) { testDesc = '뇌CT·혈액검사 등'; treatDesc = '약물 처방 중심'; }
+  else if (areaList.some(a => a === '피부')) { testDesc = '피부조직검사·알레르기검사 등'; treatDesc = '연고·약물 처방'; }
+  else if (areaList.some(a => a === '옆구리')) { testDesc = '복부CT·소변검사 등'; treatDesc = '약물·수액 치료'; }
+  else if (areaList.some(a => a === '생식기·비뇨기' || a === '골반·사타구니')) { testDesc = '소변검사·초음파 등'; treatDesc = '약물 처방 중심'; }
+  else if (areaList.some(a => a === '항문·직장')) { testDesc = '대장내시경·직장수지검사 등'; treatDesc = '약물·시술 치료'; }
+  else if (areaList.some(a => a === '턱·침샘' || a === '입·치아')) { testDesc = '구강검사·X-ray 등'; treatDesc = '약물 처방·시술'; }
+
+  const d1 = document.getElementById('cf-1-desc');
+  const d2 = document.getElementById('cf-2-desc');
+  const d3 = document.getElementById('cf-3-desc');
+  if(d1) d1.textContent = '실비 청구 가능';
+  if(d2) d2.textContent = testDesc;
+  if(d3) d3.textContent = treatDesc;
+
+  updateCostTotal();
+  renderRouteCompare();
+  showToast(`${c.label} 기준 비용으로 변경했습니다`);
+}
+function renderRouteCompare() {
+  const body = document.getElementById('routeCompareBody');
+  if(!body) return;
+  const rows = [
+    ['권장 치료 경로','약 5.5만~24.5만원','보통','중복 검사 감소, 단계적 진료'],
+    ['빠른 진료 경로','약 20만~90만원','빠름','당일 검사·전문 진료 우선'],
+    ['의료비 부담 완화 경로','약 1.5만~10만원','보통','경증·초진·약 처방 중심'],
+    ['전문 진료 경로','약 46만~153만원','느림~보통','수술·입원·정밀검사 가능성']
+  ];
+  body.innerHTML = rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join('');
+}
+function handleClaimUpload() {
+  const receipt = document.getElementById('receiptFile')?.files?.[0];
+  const result = document.getElementById('resultFile')?.files?.[0];
+  if(receipt) document.getElementById('receiptFileName').textContent = receipt.name;
+  if(result) document.getElementById('resultFileName').textContent = result.name;
+  const box = document.getElementById('insuranceResult');
+  if(box) box.style.display = 'none';
+  if(receipt || result) showToast('추후 연동 예정 기능입니다.');
+}
+
+function connectNHIS() {
+  const box = document.getElementById('insuranceResult');
+  if(box) box.style.display = 'none';
+  showToast('추후 연동 예정 기능입니다.');
+}
+
+function connectInsurer() {
+  const box = document.getElementById('insuranceResult');
+  if(box) box.style.display = 'none';
+  showToast('추후 연동 예정 기능입니다.');
+}
+
+function checkInsuranceClaim() {
+  const box = document.getElementById('insuranceResult');
+  if(box) box.style.display = 'none';
+  showToast('추후 연동 예정 기능입니다.');
+}
+
+function formatDateInput(el) {
+  let digits = el.value.replace(/\D/g, '').slice(0, 8);
+  let formatted = digits;
+  if(digits.length > 4) formatted = digits.slice(0, 4) + '-' + digits.slice(4);
+  if(digits.length > 6) formatted = digits.slice(0, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6);
+  el.value = formatted;
+}
+
+function handleDateBackspace(e, el) {
+  if(e.key !== 'Backspace') return;
+  const pos = el.selectionStart;
+  const end = el.selectionEnd;
+  if(pos !== end) return;
+  if(pos > 0 && el.value[pos - 1] === '-') {
+    e.preventDefault();
+    el.value = el.value.slice(0, pos - 2) + el.value.slice(pos);
+    const newPos = Math.max(pos - 2, 0);
+    el.setSelectionRange(newPos, newPos);
+  }
+}
+
+function syncPickerFromDuration(el) {
+  const picker = document.getElementById('durationPicker');
+  if(!picker) return;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(el.value)) picker.value = el.value;
+}
+
+function syncDurationFromPicker(el) {
+  const input = document.getElementById('duration');
+  if(input) input.value = el.value || '';
+}
+
+function openDurationPicker() {
+  const picker = document.getElementById('durationPicker');
+  const input = document.getElementById('duration');
+  if(!picker) return;
+  if(input && /^\d{4}-\d{2}-\d{2}$/.test(input.value)) picker.value = input.value;
+  if(typeof picker.showPicker === 'function') picker.showPicker();
+  else picker.click();
+}
+
+function toggleMemoEdit() {
+  const card = document.getElementById('memoCardEl');
+  const btn = document.getElementById('memoEditBtn');
+  if(!card || !btn) return;
+  const editing = card.getAttribute('contenteditable') === 'true';
+  if(editing) {
+    card.setAttribute('contenteditable', 'false');
+    card.classList.remove('editing');
+    btn.textContent = '수정하기';
+    showToast('증상 요약 카드 수정이 완료되었습니다');
+  } else {
+    card.setAttribute('contenteditable', 'true');
+    card.classList.add('editing');
+    btn.textContent = '수정 완료';
+    card.focus();
+    showToast('증상 요약 카드 내용을 직접 수정할 수 있습니다');
+  }
+}
+
+// ═══ REGION DATA ═══
+const SIGUNGU = {
+  '서울':['강남구','강동구','강북구','강서구','관악구','광진구','구로구','금천구','노원구','도봉구','동대문구','동작구','마포구','서대문구','서초구','성동구','성북구','송파구','양천구','영등포구','용산구','은평구','종로구','중구','중랑구'],
+  '경기':['수원시','성남시','고양시','용인시','부천시','안산시','안양시','남양주시','화성시','평택시','의정부시','시흥시','파주시','김포시','광명시','광주시','군포시','하남시','오산시','이천시','양주시','구리시','안성시','포천시','의왕시','양평군','동두천시','과천시','가평군','연천군'],
+  '인천':['중구','동구','미추홀구','연수구','남동구','부평구','계양구','서구','강화군','옹진군'],
+  '대전':['동구','중구','서구','유성구','대덕구'],
+  '대구':['중구','동구','서구','남구','북구','수성구','달서구','달성군','군위군'],
+  '부산':['중구','서구','동구','영도구','부산진구','동래구','남구','북구','해운대구','사하구','금정구','강서구','연제구','수영구','사상구','기장군'],
+  '광주':['동구','서구','남구','북구','광산구'],
+  '울산':['중구','남구','동구','북구','울주군'],
+  '세종':['세종시'],
+  '강원':['춘천시','원주시','강릉시','동해시','태백시','속초시','삼척시','홍천군','횡성군','영월군','평창군','정선군','철원군','화천군','양구군','인제군','고성군','양양군'],
+  '충북':['청주시','충주시','제천시','보은군','옥천군','영동군','증평군','진천군','괴산군','음성군','단양군'],
+  '충남':['천안시','공주시','보령시','아산시','서산시','논산시','계룡시','당진시','금산군','부여군','서천군','청양군','홍성군','예산군','태안군'],
+  '전북':['전주시','군산시','익산시','정읍시','남원시','김제시','완주군','진안군','무주군','장수군','임실군','순창군','고창군','부안군'],
+  '전남':['목포시','여수시','순천시','나주시','광양시','담양군','곡성군','구례군','고흥군','보성군','화순군','장흥군','강진군','해남군','영암군','무안군','함평군','영광군','장성군','완도군','진도군','신안군'],
+  '경북':['포항시','경주시','김천시','안동시','구미시','영주시','영천시','상주시','문경시','경산시','의성군','청송군','영양군','영덕군','청도군','고령군','성주군','칠곡군','예천군','봉화군','울진군','울릉군'],
+  '경남':['창원시','진주시','통영시','사천시','김해시','밀양시','거제시','양산시','의령군','함안군','창녕군','고성군','남해군','하동군','산청군','함양군','거창군','합천군'],
+  '제주':['제주시','서귀포시']
+};
+const DONG = {
+  /* 서울 강남구 */ '강남구':['역삼동','삼성동','논현동','청담동','압구정동','대치동','개포동','도곡동','세곡동','자곡동','율현동','일원동','수서동'],
+  /* 서울 중구 */ '중구':['명동','을지로','회현동','충무로','소공동','저동','신당동','황학동','장충동','광희동','필동','남산동','다산동'],
+  /* 서울 종로구 */ '종로구':['청운동','효자동','사직동','삼청동','부암동','평창동','무악동','교남동','가회동','종로1·2·3·4가동','종로5·6가동','이화동','혜화동','창신동','숭인동'],
+  /* 서울 서초구 */ '서초구':['서초동','방배동','양재동','반포동','잠원동','내곡동','염곡동','신원동','원지동'],
+  /* 서울 송파구 */ '송파구':['풍납동','거여동','마천동','방이동','오금동','개롱동','가락동','문정동','장지동','위례동','잠실동','신천동','석촌동','삼전동','송파동','오륜동'],
+  /* 서울 마포구 */ '마포구':['아현동','공덕동','신공덕동','도화동','용강동','대흥동','염리동','노고산동','성산동','망원동','합정동','서교동','동교동','연남동','상암동'],
+  /* 대전 서구 */ '서구':['둔산동','탄방동','월평동','갈마동','가수원동','도안동','관저동','내동','괴정동','가장동','흑석동','변동','도마동','정림동','용문동','남선동'],
+  /* 대전 유성구 */ '유성구':['봉명동','전민동','노은동','지족동','관평동','신성동','구암동','반석동','장대동','원신흥동','궁동','어은동','구성동','덕명동','문지동','계산동','복용동'],
+  /* 대전 동구 */ '동구':['가양동','낭월동','내탑동','대별동','대성동','대청동','직동','사성동','삼괴동','삼정동','상소동','신상동','신하동','연축동','오동','용계동','용운동','용전동','원동','이사동','인동','자양동','장척동','정동','주산동','주촌동','직동','판암동','하소동'],
+  /* 대전 중구 */ '중구':['대사동','목달동','무수동','문화동','사정동','석교동','안영동','어남동','오류동','옥계동','용두동','은행동','중촌동','침산동','태평동','호동'],
+  /* 대전 대덕구 */ '대덕구':['갈전동','덕암동','문평동','법동','비래동','읍내동','오정동','와동','장동','중리동','평촌동','송촌동','신탄진동','목상동','이현동','연축동','황호동'],
+  /* 부산 해운대구 */ '해운대구':['우동','중동','좌동','송정동','반여동','반송동','석대동','재송동'],
+  /* 부산 부산진구 */ '부산진구':['부전동','범천동','연지동','초읍동','양정동','전포동','개금동','가야동','당감동','삼괴동','범전동'],
+  /* 부산 수영구 */ '수영구':['망미동','광안동','수영동','민락동','남천동'],
+  /* 경기 수원시 */ '수원시':['장안구','권선구','팔달구','영통구'],
+  /* 경기 성남시 */ '성남시':['수정구','중원구','분당구'],
+  /* 경기 고양시 */ '고양시':['덕양구','일산동구','일산서구'],
+  /* 경기 용인시 */ '용인시':['처인구','기흥구','수지구'],
+  /* 인천 연수구 */ '연수구':['옥련동','선학동','연수동','청학동','동춘동','송도동'],
+  /* 인천 남동구 */ '남동구':['구월동','간석동','만수동','장수동','서창동','논현동','고잔동'],
+  /* 광주 북구 */ '북구':['용봉동','운암동','삼각동','우산동','중흥동','동림동','일곡동','신안동','연제동','각화동','문흥동','오치동','풍향동','두암동','석곡동','망월동'],
+  /* 광주 서구 */ '광주서구':['양동','농성동','광천동','유덕동','치평동','상무동','화정동','금호동','월산동','벽진동','서창동','풍암동','마륵동','세하동'],
+  /* 대구 수성구 */ '수성구':['범어동','만촌동','수성동','두산동','지산동','범물동','고산동','시지동'],
+  /* 대구 달서구 */ '달서구':['성당동','두류동','감삼동','죽전동','장기동','용산동','이곡동','신당동','월성동','대천동','도원동','유천동','본리동','송현동','진천동','상인동','월암동','남리동'],
+  /* 경남 창원시 */ '창원시':['의창구','성산구','마산합포구','마산회원구','진해구'],
+  /* 전북 전주시 */ '전주시':['완산구','덕진구'],
+  /* 충북 청주시 */ '청주시':['상당구','서원구','흥덕구','청원구'],
+  /* 충남 천안시 */ '천안시':['동남구','서북구'],
+  /* 경북 포항시 */ '포항시':['남구','북구'],
+};
+function updateSigungu() {
+  const sido = document.getElementById('region-sido').value;
+  const sg = document.getElementById('region-sigungu');
+  const dong = document.getElementById('region-dong');
+  sg.innerHTML = '<option value="">시·군·구 선택</option>';
+  dong.innerHTML = '<option value="">읍·면·동 선택</option>';
+  dong.disabled = true;
+  if (!sido) { sg.disabled = true; return; }
+  sg.disabled = false;
+  (SIGUNGU[sido] || []).forEach(v => { sg.innerHTML += `<option>${v}</option>`; });
+}
+function updateEupmyeondong() {
+  const sg = document.getElementById('region-sigungu').value;
+  const dong = document.getElementById('region-dong');
+  dong.innerHTML = '<option value="">읍·면·동 선택</option>';
+  if (!sg) { dong.disabled = true; return; }
+  dong.disabled = false;
+  const list = DONG[sg] || [];
+  if (list.length === 0) {
+    dong.innerHTML = '<option value="">읍·면·동 정보 없음</option>';
+  } else {
+    list.forEach(v => { dong.innerHTML += `<option>${v}</option>`; });
+  }
+}
+
+// ═══ SHARE / IMAGE ═══
+function shareMemo() {
+  const symptoms = [...document.querySelectorAll('#memoSymptoms li')].map(l => '• ' + l.textContent).join('\n');
+  const say = [...document.querySelectorAll('#memoSay li')].map(l => '• ' + l.textContent).join('\n');
+  const ask = [...document.querySelectorAll('#memoAsk li')].map(l => '• ' + l.textContent).join('\n');
+  const text = `[MediRoute 증상 요약 카드]\n\n증상 정보\n${symptoms}\n\n병원에서 말씀하실 내용\n${say}\n\n의사에게 물어볼 질문\n${ask}`;
+  if (navigator.share) {
+    navigator.share({ title: 'MediRoute 증상 요약 카드', text }).catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('공유 텍스트가 복사되었습니다 (공유 API 미지원 브라우저)'));
+  }
+}
+
+function downloadMemoImage() {
+  const el = document.getElementById('memoCardEl');
+  const rect = el.getBoundingClientRect();
+  const width = Math.max(600, Math.ceil(rect.width));
+  const height = Math.max(520, Math.ceil(el.scrollHeight + 48));
+  const html = el.outerHTML;
+  const styles = `
+    body{margin:0;padding:20px;font-family:'Noto Sans KR',Arial,sans-serif;background:#FFFFFF;}
+    .memo-card{background:#FFFFFF;border:1.5px solid #BEE3F8;border-radius:0;padding:24px;box-sizing:border-box;width:${width - 40}px;}
+    .memo-title{font-size:16px;font-weight:700;margin-bottom:16px;color:#1A202C;}
+    .memo-section{margin-bottom:16px;}
+    .memo-section h4{font-size:13px;font-weight:700;color:#2B6CB0;margin-bottom:8px;}
+    .memo-list{list-style:none;padding:0;margin:0;}
+    .memo-list li{font-size:13px;color:#1A202C;padding:5px 0 5px 16px;border-bottom:1px solid rgba(0,0,0,0.05);position:relative;}
+    .memo-list li::before{content:'·';position:absolute;left:4px;color:#2B6CB0;font-weight:700;}
+  `;
+  const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <foreignObject width="100%" height="100%">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <style>${styles}
+  /* 추천 진료과 선택 시 선택 칸 글자 파란색 표시 */
+  .dept-card.selected-dept {
+    border-color: var(--accent) !important;
+    background: #EBF4FF !important;
+  }
+  .dept-card.selected-dept .dept-name,
+  .dept-card.selected-dept .dept-reason {
+    color: var(--accent) !important;
+  }
+
+
+
+/* PATCH: 추천 진료과 클릭 상태와 관련 병원 표시 */
+.dept-card { cursor: pointer; }
+.dept-card.selected-dept {
+  background: #EBF4FF !important;
+  border-color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-name,
+.dept-card.selected-dept .dept-reason {
+  color: #2B6CB0 !important;
+}
+.dept-card.selected-dept .dept-rank {
+  background: #2B6CB0 !important;
+  color: #fff !important;
+}
+
+</style>
+        ${html}
+      </div>
+    </foreignObject>
+  </svg>`;
+  const svgUrl = URL.createObjectURL(new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'}));
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(svgUrl);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/jpeg', 0.95);
+    a.download = 'mediroute_증상요약카드.jpg';
+    a.click();
+    showToast('JPG 이미지로 저장되었습니다');
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(svgUrl);
+    showToast('이미지 저장을 지원하지 않는 브라우저입니다');
+  };
+  img.src = svgUrl;
+}
+
+// ═══ COPY MEMO ═══
+function copyMemo() {
+  const symptoms = [...document.querySelectorAll('#memoSymptoms li')].map(l=>'• '+l.textContent).join('\n');
+  const say = [...document.querySelectorAll('#memoSay li')].map(l=>'• '+l.textContent).join('\n');
+  const ask = [...document.querySelectorAll('#memoAsk li')].map(l=>'• '+l.textContent).join('\n');
+  const text = `[ 증상 요약 카드 — MediRoute ]\n\n📋 증상 정보\n${symptoms}\n\n🗣 병원에서 말씀하실 내용\n${say}\n\n❓ 의사에게 물어볼 질문\n${ask}`;
+  navigator.clipboard.writeText(text).then(() => showToast('요약 카드가 복사되었습니다'));
+}
+
+// ═══ COST TOTAL CALC ═══
+function updateCostTotal() {
+  // 각 칸의 텍스트에서 숫자 범위를 파싱해 합산
+  function parseRange(id) {
+    const txt = document.getElementById(id)?.textContent || '';
+    const nums = txt.replace(/[^0-9~]/g, '').split('~').map(n => parseInt(n.replace(/\D/g,'')) || 0);
+    const low = nums[0] || 0;
+    const high = nums[1] || nums[0] || 0;
+    return [low, high];
+  }
+  const ids = ['cf-1','cf-2','cf-3','cf-4'];
+  let totalLow = 0, totalHigh = 0;
+  ids.forEach(id => {
+    const [l, h] = parseRange(id);
+    totalLow += l;
+    totalHigh += h;
+  });
+  const fmt = n => n >= 10000
+    ? (n / 10000 % 1 === 0 ? (n/10000) + '만원' : Math.round(n/10000*10)/10 + '만원')
+    : n.toLocaleString() + '원';
+  const el = document.getElementById('costTotal');
+  if(el) el.textContent = fmt(totalLow) + ' ~ ' + fmt(totalHigh);
+}
+
+renderRouteCompare();
+// selectRoute는 사용자가 경로를 클릭할 때만 호출
+
+// ═══ TOAST ═══
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+
+// PATCH: 추천 진료과 클릭 시 글자 파란색 + 아래 관련 병원 목록 표시
+function selectDeptCard(el, dept) {
+  const deptName = String(dept || "").trim();
+  document.querySelectorAll(".dept-card").forEach(card => card.classList.remove("selected-dept"));
+  if (el) el.classList.add("selected-dept");
+  if (!deptName) return;
+  state.selectedDept = deptName;
+  const guide = document.getElementById("hospGuide");
+  if(guide) guide.textContent = deptName + " 선택됨 — 위 병원 안내에서 동네 의원, 전문 병원, 대학 병원을 선택하세요.";
+  const nb = document.getElementById("hospNearby");
+  if(nb) nb.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-light);font-size:13px;">위 병원 안내에서 동네 의원, 전문 병원, 대학 병원 중 하나를 선택하세요.</div>';
+}
+
+function renderDeptRelatedHospitals(deptName) {
+  state.selectedDept = deptName;
+  document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+
+  const guide = document.getElementById('hospGuide');
+  if (guide) guide.textContent = `${deptName} 관련 병원을 GPS 거리순으로 표시합니다.`;
+
+  let hospitals = (state.nearbyHospitals || [])
+    .filter(h => {
+      const hDept = String(h.dept || '');
+      const hName = String(h.name || '');
+      const hFit = String(h.fit || '');
+      return hDept.includes(deptName) || deptName.includes(hDept) || hName.includes(deptName) || hFit.includes(deptName);
+    })
+    .sort((a, b) => Number(a.distanceKm || 999) - Number(b.distanceKm || 999));
+
+  // 기존 병원 데이터에 해당 진료과가 없으면, 선택한 진료과 기준 예시 병원 목록을 생성해서 아래에 보여줍니다.
+  if (hospitals.length === 0) {
+    hospitals = buildDeptHospitals(deptName);
+  }
+
+  renderHospitalItems(hospitals, `${deptName} 관련 병원 데이터가 없습니다.`);
+}
+
+// 동적으로 생성된 카드에도 클릭이 안정적으로 작동하도록 보강
+(function bindDeptCardClickFallback(){
+  document.addEventListener('click', function(e){
+    const card = e.target.closest('.dept-card');
+    if(!card) return;
+    const deptName = card.querySelector('.dept-name')?.textContent?.trim();
+    if(!deptName) return;
+    selectDeptCard(card, deptName);
+  });
+})();
+
+</script>
+
+
+<style id="related-dept-disease-fix-style">
+  /* 추천 진료과는 클릭 전에는 회색 상태, 클릭한 항목만 파란색 상태 */
+  .dept-card .dept-rank,
+  .dept-card .dept-rank.r1,
+  .dept-card .dept-rank.r2,
+  .dept-card .dept-rank.r3 {
+    background: #8A94A3 !important;
+    color: #fff !important;
+  }
+  .dept-card:not(.selected-dept) .dept-name,
+  .dept-card:not(.selected-dept) .dept-reason {
+    color: var(--text) !important;
+  }
+  .dept-card.selected-dept {
+    background: #EBF4FF !important;
+    border-color: var(--accent) !important;
+  }
+  .dept-card.selected-dept .dept-rank,
+  .dept-card.selected-dept .dept-rank.r1,
+  .dept-card.selected-dept .dept-rank.r2,
+  .dept-card.selected-dept .dept-rank.r3 {
+    background: var(--accent) !important;
+    color: #fff !important;
+  }
+  .dept-card.selected-dept .dept-name,
+  .dept-card.selected-dept .dept-reason {
+    color: var(--accent) !important;
+  }
+</style>
+
+<script id="related-dept-disease-fix-script">
+// PATCH: 입력 부위/증상과 관련 있는 예상 질환 및 추천 진료과 생성
+function getMedicalContextText() {
+  return [state.symptom || '', (state.areas || []).join(' '), state.meds || '', state.disease || ''].join(' ');
+}
+
+function hasAnyText(text, words) {
+  return words.some(w => text.includes(w));
+}
+
+function buildRelatedMedicalSuggestions() {
+  const text = getMedicalContextText();
+  const areaList = state.areas || [];
+  const areas = areaList.join(" ");
+  let urgency = "낮음";
+
+  // ── 긴급/심각 키워드 ──
+  const emergencyWords = ["흉통","호흡곤란","의식","마비","대량출혈","실신","경련","심정지","뇌출혈"];
+  const urgentWords = ["고열","39도","40도","급성","심한통증","갑자기","숨쉴때","혈변","혈뇨","구토반복","심한","극심","참을수없","어지러움","구토","구역"];
+  const severityWords = ["악화","점점","계속","반복","매일","못자","일상생활","지장","걸을수없","무기력","피로"];
+  if (state.isUrgent || hasAnyText(text, emergencyWords)) urgency = "높음";
+  else if (hasAnyText(text, urgentWords)) urgency = "보통";
+
+  // ── 증상 개수 (여러 증상 선택 시 상향) ──
+  const symptomTokens = (state.symptom || '').split(/[\s,·]+/).filter(t => t.length >= 2);
+  const areaCount = areaList.length;
+  if (areaCount >= 3 && urgency === "낮음") urgency = "보통";
+  if (areaCount >= 5) urgency = urgency === "높음" ? "높음" : "보통";
+  if (symptomTokens.length >= 3 && urgency === "낮음") urgency = "보통";
+  if (hasAnyText(text, severityWords) && urgency === "낮음") urgency = "보통";
+
+  // ── 증상 기간 (오래되면 상향) ──
+  const dur = (state.duration || '').trim();
+  const durText = (document.getElementById('durationText')?.value || '').trim();
+  const durAll = dur + ' ' + durText;
+  if (durAll.trim()) {
+    const dateMatch = dur.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (dateMatch) {
+      const diffDays = Math.floor((new Date() - new Date(dur)) / 86400000);
+      if (diffDays >= 30 && urgency === "낮음") urgency = "보통";
+      if (diffDays >= 90) urgency = urgency === "높음" ? "높음" : "보통";
+    }
+    if (hasAnyText(durAll, ["몇달","몇개월","반년","6개월","1년","오래","수년","3개월","한달넘게"])) {
+      if (urgency === "낮음") urgency = "보통";
+    }
+  }
+
+  // ═══ 부위 우선 매핑 + 증상 세분화 ═══
+
+  // ── 목·인후 ──
+  if (areaList.some(a => a === "목·인후" || a === "귀" || a === "코")) {
+    let diseases, depts;
+    if (hasAnyText(text, ["삼킴","삼키기","연하","목소리","쉰목"])) {
+      diseases = [{name:"인후염·편도염 가능성",reason:"삼킴 곤란·목소리 변화 확인"},{name:"후두염 가능성",reason:"쉰 목소리·기침 확인 필요"},{name:"갑상선 이상 확인",reason:"목 앞쪽 부종·삼킴 불편 확인"}];
+      depts = [{name:"이비인후과",reason:"인후·편도 전문 진료 가능"},{name:"내과",reason:"갑상선·감염 확인 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}];
+    } else if (hasAnyText(text, ["귀","이명","청력","어지러움"])) {
+      diseases = [{name:"중이염 가능성",reason:"귀 통증·분비물 확인 필요"},{name:"이관기능장애 가능성",reason:"귀 먹먹함·이명 확인"},{name:"메니에르병 확인",reason:"어지러움·이명 동반 시 확인"}];
+      depts = [{name:"이비인후과",reason:"귀 증상 전문 진료 가능"},{name:"신경과",reason:"어지러움 원인 감별 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}];
+    } else {
+      diseases = [{name:"상기도 감염 가능성",reason:"목·코 증상과 분비물 동반"},{name:"비염 또는 부비동염 가능성",reason:"콧물·후비루 확인 필요"},{name:"인후염 가능성",reason:"목 불편감·발열 여부 확인"}];
+      depts = [{name:"이비인후과",reason:"귀·코·목 전문 진료 가능"},{name:"내과",reason:"감염·발열 동반 확인 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}];
+    }
+    return { diseases, depts, urgency };
+  }
+
+  // ── 가슴·심장 ──
+  if (areaList.some(a => a === "가슴·심장")) {
+    if (hasAnyText(text, ["숨쉴때","호흡","숨","찌르는"])) urgency = urgency === "높음" ? "높음" : "보통";
+    if (hasAnyText(text, ["압박","쥐어짜는","방사통","턱까지"])) urgency = "높음";
+    let diseases = [{name:"흉막염 또는 늑간신경통 가능성",reason:"숨쉴 때 찌르는 통증 확인"},{name:"협심증·심근경색 가능성",reason:"가슴 압박감·방사통 확인"},{name:"역류성 식도염 가능성",reason:"가슴 쓰림·식후 악화 확인"}];
+    let depts = [{name:"심장내과",reason:"가슴 통증·심장 확인 가능"},{name:"호흡기내과",reason:"호흡 관련 흉통 확인 가능"},{name:"응급의학과",reason:"급성 흉통 시 즉시 확인"}];
+    return { diseases, depts, urgency };
+  }
+
+  // ── 옆구리 ──
+  if (areaList.some(a => a === "옆구리")) {
+    if (hasAnyText(text, ["숨쉴때","호흡","찌르는"])) {
+      urgency = urgency === "높음" ? "높음" : "보통";
+      return { diseases:[{name:"늑간신경통 가능성",reason:"숨쉴 때 옆구리 찌르는 통증"},{name:"흉막염 가능성",reason:"호흡 시 악화되는 통증"},{name:"기흉 가능성",reason:"갑작스러운 통증+호흡곤란"}], depts:[{name:"호흡기내과",reason:"호흡 관련 확인 가능"},{name:"심장내과",reason:"흉통 감별 가능"},{name:"응급의학과",reason:"급성 시 즉시 확인"}], urgency };
+    }
+    return { diseases:[{name:"요로결석 가능성",reason:"극심한 옆구리 통증·혈뇨 확인"},{name:"신장염 가능성",reason:"옆구리 통증·발열 동반 확인"},{name:"근막통증 가능성",reason:"자세 관련 옆구리 통증 확인"}], depts:[{name:"비뇨의학과",reason:"요로결석·신장 확인 가능"},{name:"내과",reason:"신장·복부 원인 확인 가능"},{name:"정형외과",reason:"근골격계 원인 확인 가능"}], urgency };
+  }
+
+  // ── 배·소화기 ──
+  if (areaList.some(a => a === "배·소화기")) {
+    if (hasAnyText(text, ["급성","심한","갑자기","구토반복"])) urgency = urgency === "높음" ? "높음" : "보통";
+    if (hasAnyText(text, ["속쓰림","소화불량","더부룩"])) {
+      return { diseases:[{name:"위염·위궤양 가능성",reason:"속쓰림·상복부 통증 확인"},{name:"역류성 식도염 가능성",reason:"가슴쓰림·신트림 확인"},{name:"기능성 소화불량 확인",reason:"식후 더부룩함 확인"}], depts:[{name:"소화기내과",reason:"위내시경·소화기 확인 가능"},{name:"내과",reason:"소화기 증상 전반 확인 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+    }
+    return { diseases:[{name:"위장관염 가능성",reason:"복통·구토·설사 확인 필요"},{name:"소화불량·위염 가능성",reason:"상복부 불편감 확인"},{name:"담낭·충수 등 복부 질환 확인",reason:"통증 위치와 강도 확인"}], depts:[{name:"소화기내과",reason:"복통·소화기 확인 가능"},{name:"내과",reason:"전신·복부 확인 가능"},{name:"가정의학과",reason:"초진 후 필요한 진료과 의뢰 가능"}], urgency };
+  }
+
+  // ── 손목·손가락 ──
+  if (areaList.some(a => a === "손목·손가락")) {
+    if (hasAnyText(text, ["저림","마비","감각"])) {
+      return { diseases:[{name:"손목터널증후군 가능성",reason:"손목·손가락 저림·마비 확인"},{name:"경추 디스크 의심",reason:"목에서 시작되는 저림 확인"},{name:"말초신경병증 확인",reason:"감각 이상 원인 확인 필요"}], depts:[{name:"정형외과",reason:"손목 관절·신경 확인 가능"},{name:"신경외과",reason:"신경 압박 원인 확인 가능"},{name:"재활의학과",reason:"근전도 검사·평가 가능"}], urgency };
+    }
+    return { diseases:[{name:"건초염(드퀘르벵) 가능성",reason:"손목 통증·부종 확인 필요"},{name:"관절염 가능성",reason:"손가락 관절 통증·부종 확인"},{name:"손목터널증후군 가능성",reason:"저림 동반 시 확인 필요"}], depts:[{name:"정형외과",reason:"손목·손가락 확인 가능"},{name:"재활의학과",reason:"통증·기능 평가 가능"},{name:"류마티스내과",reason:"관절염 여부 확인 가능"}], urgency };
+  }
+
+  // ── 팔·손 ──
+  if (areaList.some(a => a === "팔·손")) {
+    return { diseases:[{name:"테니스엘보·골프엘보 가능성",reason:"팔꿈치 통증·악력 저하 확인"},{name:"말초신경병증 가능성",reason:"저림·마비·감각 이상 확인"},{name:"근육 염좌 가능성",reason:"팔 통증·운동 제한 확인"}], depts:[{name:"정형외과",reason:"팔·손 관절·근육 확인 가능"},{name:"재활의학과",reason:"통증·기능 평가 가능"},{name:"신경과",reason:"저림·마비 원인 확인 가능"}], urgency };
+  }
+
+  // ── 무릎 ──
+  if (areaList.some(a => a === "무릎")) {
+    if (hasAnyText(text, ["부었","붓기","부종","열감"])) {
+      return { diseases:[{name:"무릎 활액막염 가능성",reason:"무릎 부종·열감 확인 필요"},{name:"류마티스 관절염 확인",reason:"양측 관절 부종 시 확인"},{name:"통풍 가능성",reason:"급성 관절 부종·발적 확인"}], depts:[{name:"정형외과",reason:"무릎 관절 확인 가능"},{name:"류마티스내과",reason:"자가면역 관절염 확인 가능"},{name:"재활의학과",reason:"운동 기능 평가 가능"}], urgency };
+    }
+    return { diseases:[{name:"무릎 관절증(퇴행성) 가능성",reason:"통증·부종·운동 제한 확인"},{name:"반월상연골 손상 가능성",reason:"무릎 잠김·불안정성 확인"},{name:"인대 손상 가능성",reason:"외상 후 부종·불안정성 확인"}], depts:[{name:"정형외과",reason:"무릎 관절·인대 확인 가능"},{name:"재활의학과",reason:"통증·운동 기능 평가 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+  }
+
+  // ── 발목·발가락 ──
+  if (areaList.some(a => a === "발목·발가락" || a === "다리·발")) {
+    if (hasAnyText(text, ["접질","삐었","염좌"])) {
+      return { diseases:[{name:"발목 인대 손상 가능성",reason:"접질림 후 부종·통증 확인"},{name:"골절 가능성",reason:"심한 부종·체중 부하 불가 시"},{name:"연부조직 손상 확인",reason:"타박·근육 손상 여부 확인"}], depts:[{name:"정형외과",reason:"인대·골절 확인 가능"},{name:"응급의학과",reason:"급성 외상 시 확인 가능"},{name:"재활의학과",reason:"회복·재활 평가 가능"}], urgency };
+    }
+    return { diseases:[{name:"족저근막염 가능성",reason:"발바닥 통증·아침 첫걸음 확인"},{name:"통풍 가능성",reason:"급성 관절 통증·발적 확인"},{name:"발목 염좌 가능성",reason:"통증·부종·운동 제한 확인"}], depts:[{name:"정형외과",reason:"발목·발 관절 확인 가능"},{name:"류마티스내과",reason:"통풍·관절염 확인 가능"},{name:"재활의학과",reason:"통증·보행 평가 가능"}], urgency };
+  }
+
+  // ── 어깨 ──
+  if (areaList.some(a => a === "어깨")) {
+    if (hasAnyText(text, ["올림","들어올","팔올림","야간통"])) {
+      return { diseases:[{name:"회전근개 손상 가능성",reason:"팔 올림 제한·야간통 확인"},{name:"어깨 충돌증후군 가능성",reason:"팔 들 때 통증 확인"},{name:"석회성 건염 가능성",reason:"갑작스러운 극심한 어깨 통증"}], depts:[{name:"정형외과",reason:"어깨 관절·힘줄 확인 가능"},{name:"재활의학과",reason:"초음파·운동 평가 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+    }
+    return { diseases:[{name:"오십견(동결견) 가능성",reason:"어깨 운동 범위 감소 확인"},{name:"회전근개 손상 가능성",reason:"어깨 통증·팔 올림 제한"},{name:"어깨 충돌증후군 가능성",reason:"팔 들 때 통증 확인"}], depts:[{name:"정형외과",reason:"어깨 관절·힘줄 확인 가능"},{name:"재활의학과",reason:"통증·운동 기능 평가 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+  }
+
+  // ── 등·허리 ──
+  if (areaList.some(a => a === "등·허리")) {
+    if (hasAnyText(text, ["저림","다리저림","마비","보행"])) {
+      urgency = urgency === "높음" ? "높음" : "보통";
+      return { diseases:[{name:"허리 디스크 가능성",reason:"요통+다리 저림 확인 필요"},{name:"척추관 협착증 가능성",reason:"보행 시 다리 저림·통증"},{name:"마미증후군 확인",reason:"배변장애 동반 시 응급"}], depts:[{name:"정형외과",reason:"척추·허리 확인 가능"},{name:"신경외과",reason:"디스크·신경 압박 확인 가능"},{name:"재활의학과",reason:"통증·기능 평가 가능"}], urgency };
+    }
+    return { diseases:[{name:"근막통증 가능성",reason:"자세 관련 등·허리 통증 확인"},{name:"허리 디스크 가능성",reason:"요통·다리 방사통 확인"},{name:"척추관 협착증 가능성",reason:"걸을 때 다리 저림 확인"}], depts:[{name:"정형외과",reason:"척추·허리 확인 가능"},{name:"재활의학과",reason:"통증·운동 기능 평가 가능"},{name:"신경외과",reason:"신경 압박 원인 확인 가능"}], urgency };
+  }
+
+  // ── 머리·두피 ──
+  if (areaList.some(a => a === "머리·두피")) {
+    if (hasAnyText(text, ["갑자기","최악","구토","의식"])) urgency = "높음";
+    else if (hasAnyText(text, ["반복","만성","편두통"])) urgency = urgency === "높음" ? "높음" : "보통";
+    return { diseases:[{name:"긴장성 두통 가능성",reason:"스트레스·자세 관련 두통"},{name:"편두통 가능성",reason:"반복적 박동성 두통 확인"},{name:"두피 질환 가능성",reason:"두피 가려움·발진 확인"}], depts:[{name:"신경과",reason:"두통 원인 감별·진료 가능"},{name:"내과",reason:"전신 원인 두통 확인 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+  }
+
+  // ── 눈 ──
+  if (areaList.some(a => a === "눈")) {
+    if (hasAnyText(text, ["갑자기","시력저하","번쩍","커튼"])) urgency = "높음";
+    return { diseases:[{name:"결막염 가능성",reason:"충혈·분비물 확인 필요"},{name:"안구건조증 가능성",reason:"이물감·통증 확인"},{name:"시력 관련 이상 확인",reason:"시야 변화 동반 시 확인"}], depts:[{name:"안과",reason:"눈 증상 전문 확인 가능"},{name:"가정의학과",reason:"초진 후 안과 의뢰 가능"},{name:"응급의학과",reason:"급격한 시력저하 시 확인"}], urgency };
+  }
+
+  // ── 유방 ──
+  if (areaList.some(a => a === "유방")) {
+    return { diseases:[{name:"유방 통증·염증 가능성",reason:"유방 통증·부종 확인 필요"},{name:"유방 양성 병변 확인",reason:"멍울·압통 여부 진료 필요"},{name:"유선 관련 질환 확인",reason:"분비물·피부 변화 확인"}], depts:[{name:"유방외과",reason:"유방 증상 전문 확인 가능"},{name:"산부인과",reason:"여성 유방·호르몬 상담 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+  }
+
+  // ── 턱·침샘 / 입·치아 ──
+  if (areaList.some(a => a === "턱·침샘" || a === "입·치아")) {
+    return { diseases:[{name:"침샘염 가능성",reason:"턱 밑 붓기·분비물 확인 필요"},{name:"타석증 가능성",reason:"식사 시 통증·부종 반복 확인"},{name:"구강 감염 가능성",reason:"입안·치아 주변 염증 확인"}], depts:[{name:"이비인후과",reason:"침샘·턱 밑 확인 가능"},{name:"치과",reason:"치아·구강 원인 확인 가능"},{name:"구강악안면외과",reason:"턱·침샘 정밀 확인 가능"}], urgency };
+  }
+
+  // ── 생식기·비뇨기 / 골반·사타구니 ──
+  if (areaList.some(a => a === "생식기·비뇨기" || a === "골반·사타구니")) {
+    return { diseases:[{name:"요로감염 가능성",reason:"빈뇨·배뇨통·혈뇨 확인"},{name:"방광염 가능성",reason:"하복부 통증·빈뇨 확인"},{name:"전립선/부인과 질환 확인",reason:"성별·증상에 따른 확인"}], depts:[{name:"비뇨의학과",reason:"비뇨기 전문 확인 가능"},{name:"산부인과",reason:"여성 골반·생식기 확인 가능"},{name:"내과",reason:"감염·전신 증상 확인 가능"}], urgency };
+  }
+
+  // ── 항문·직장 ──
+  if (areaList.some(a => a === "항문·직장")) {
+    return { diseases:[{name:"치핵(치질) 가능성",reason:"항문 통증·출혈 확인 필요"},{name:"항문열상 가능성",reason:"배변 시 통증·출혈 확인"},{name:"직장 질환 확인",reason:"혈변·배변 습관 변화 확인"}], depts:[{name:"외과(대장항문)",reason:"항문·직장 전문 확인 가능"},{name:"소화기내과",reason:"대장 내시경 확인 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+  }
+
+  // ── 피부 (명시적 선택만) ──
+  if (areaList.some(a => a === "피부")) {
+    return { diseases:[{name:"접촉성 피부염 가능성",reason:"발진·가려움 증상 관련"},{name:"두드러기 가능성",reason:"가려움·붓기 확인 필요"},{name:"피부 감염 가능성",reason:"분비물·열감·부종 확인"}], depts:[{name:"피부과",reason:"피부 병변 전문 확인 가능"},{name:"알레르기내과",reason:"알레르기 반응 확인 가능"},{name:"가정의학과",reason:"초진 후 의뢰 가능"}], urgency };
+  }
+
+  // ── 전신·여러 부위 ──
+  if (areaList.some(a => a === "전신·여러 부위" || a === "잘 모르겠음")) {
+    if (hasAnyText(text, ["열","발열","오한"])) urgency = urgency === "높음" ? "높음" : "보통";
+    return { diseases:[{name:"감염성 질환 가능성",reason:"발열·통증·분비물 확인 필요"},{name:"자가면역 질환 확인",reason:"여러 부위 동시 증상 시"},{name:"전신 염증 반응 확인",reason:"피로·근육통·발열 동반 확인"}], depts:[{name:"내과",reason:"전신 증상 확인 가능"},{name:"가정의학과",reason:"초진 종합 평가 가능"},{name:"류마티스내과",reason:"자가면역 질환 확인 가능"}], urgency };
+  }
+
+  // ── 기본 폴백 ──
+  return { diseases:[{name:"감염성 질환 가능성",reason:"발열·통증·분비물 확인 필요"},{name:"염증성 질환 가능성",reason:"부종·통증·기능 저하 확인"},{name:"일반 초진 필요 증상",reason:"의료진 문진 후 진료과 확정"}], depts:[{name:"가정의학과",reason:"초진 종합 평가 가능"},{name:"내과",reason:"전신 증상·감염 확인 가능"},{name:"가정의학과",reason:"필요 시 전문과 의뢰 가능"}], urgency };
+}
+
+function renderRelatedDepartments(depts) {
+  const deptList = document.getElementById('deptList');
+  if (!deptList) return;
+  const items = (depts || buildRelatedMedicalSuggestions().depts).slice(0, 3);
+  state.dept1 = items[0]?.name || '';
+  state.dept2 = items[1]?.name || '';
+  state.dept3 = items[2]?.name || '';
+  deptList.innerHTML = items.map((d, i) => `
+    <div class="dept-card" onclick="selectDeptCard(this, '${escapeAttr(d.name)}')" title="관련 병원 보기">
+      <div class="dept-rank r${i + 1}">${i + 1}</div>
+      <div>
+        <div class="dept-name">${escapeHtml(d.name)}</div>
+        <div class="dept-reason">${escapeHtml(d.reason)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderRelatedResult(r) {
+  const related = buildRelatedMedicalSuggestions();
+
+  document.getElementById('emergencyBanner').style.display = ((r && r.isUrgent) || state.isUrgent) ? 'flex' : 'none';
+  document.getElementById('as-area').textContent = (r && r.areaText) || (state.areas || []).join(', ') || '—';
+  document.getElementById('as-symptom').textContent = (r && r.symptomText) || (state.symptom || '').slice(0, 30) || '—';
+  document.getElementById('as-duration').textContent = state.duration || '—';
+
+  const urg = (r && r.urgencyText) || related.urgency || (state.isUrgent ? '높음' : '낮음');
+  const urgEl = document.getElementById('as-urgency');
+  const urgMap2 = {'낮음': '일반 진료 권장', '보통': '빠른 진료 권장', '높음': '즉시 진료 또는 응급 평가 권장'};
+  urgEl.textContent = urgMap2[urg] || urg;
+  urgEl.style.color = urg === '높음' ? 'var(--warn)' : urg === '보통' ? '#D69E2E' : 'var(--accent2)';
+
+  renderDiseaseList(related.diseases);
+  renderRelatedDepartments(related.depts);
+
+  if (r && r.hospGuide) document.getElementById('hospGuide').textContent = r.hospGuide;
+
+  const region = state.region || '현재 위치 주변';
+  const baseHospitals = [
+    {name:`${state.dept1 || '가정의학과'} 의원`, type:'의원', dept:state.dept1 || '가정의학과', address:region, hours:'평일 주간 (9:00~18:00)', fit:`${state.dept1 || '가정의학과'} 관련 1차 진료`, distanceKm:0.6},
+    {name:`${state.dept2 || '전문'} 전문병원`, type:'전문병원', dept:state.dept2 || state.dept1 || '전문 진료', address:region, hours:'평일 (9:00~17:00)', fit:`${state.dept2 || state.dept1 || '전문'} 관련 전문 진료`, distanceKm:1.8},
+    {name:`${state.dept3 || '대학'} 대학병원`, type:'대학병원', dept:state.dept3 || state.dept1 || '전문 진료', address:region, hours:'평일 (8:30~17:00)', fit:'정밀검사·협진 필요 시 이용', distanceKm:3.7}
+  ];
+  state.nearbyHospitals = normalizeHospitals((r && r.nearbyHospitals && r.nearbyHospitals.length) ? r.nearbyHospitals : baseHospitals);
+  resetHospitalList('병원 안내에서 동네 의원·전문 병원·대학 병원을 클릭하거나 추천 진료과를 클릭하면 관련 병원이 GPS 거리순으로 표시됩니다.');
+
+  const memoSymptoms = document.getElementById('memoSymptoms');
+  if (memoSymptoms) {
+    memoSymptoms.innerHTML = [
+      `증상: ${state.symptom || (state.areas || []).join(', ')}`,
+      `시작일: ${state.duration || '알 수 없음'}`,
+      `나이·성별: ${state.age || '?'}세 ${state.gender || ''}`,
+      state.meds ? `복용약: ${state.meds}` : null,
+      state.disease ? `기저질환: ${state.disease}` : null
+    ].filter(Boolean).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+  }
+
+  const memoSay = document.getElementById('memoSay');
+  if (memoSay) memoSay.innerHTML = ((r && r.memoSay) || ['증상 시작일','통증 위치와 강도','분비물 색과 양 (해당 시)','발열 여부 및 체온','복용 중인 약 이름']).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+
+  const memoAsk = document.getElementById('memoAsk');
+  if (memoAsk) memoAsk.innerHTML = ((r && r.memoAsk) || ['어떤 검사가 필요한가요?','처방 약을 먹어야 하는 기간은?','재발 방지를 위한 생활 주의사항은?','추가 진료가 필요한 시점은 언제인가요?']).map(s => `<li>${escapeHtml(s)}</li>`).join('');
+
+  if (r && r.costClinic) document.getElementById('cf-1').textContent = r.costClinic;
+  if (r && r.costTest) document.getElementById('cf-2').textContent = r.costTest;
+  if (r && r.costTreat) document.getElementById('cf-3').textContent = r.costTreat;
+  if (r && r.costInpat) document.getElementById('cf-4').textContent = r.costInpat;
+  if (typeof updateCostTotal === 'function') updateCostTotal();
+
+  if (r && r.routeBest) document.getElementById('routeBest').textContent = r.routeBest;
+  if (r && r.routeFast) document.getElementById('routeFast').textContent = r.routeFast;
+  if (r && r.routeCheap) document.getElementById('routeCheap').textContent = r.routeCheap;
+  if (r && r.routePro) document.getElementById('routePro').textContent = r.routePro;
+}
+
+// analyze()가 호출하는 기존 함수명을 덮어써서 관련성 높은 항목이 나오도록 고정
+function applyResult(r) {
+  renderRelatedResult(r || {});
+}
+
+function applyFallback() {
+  renderRelatedResult({});
+}
+
+// 기존 중복 패치의 이벤트 위임은 유지하되, 클릭하지 않은 카드는 회색 상태를 유지
+function selectDeptCard(el, dept) {
+  const deptName = String(dept || "").trim();
+  document.querySelectorAll(".dept-card").forEach(card => card.classList.remove("selected-dept"));
+  if (el) el.classList.add("selected-dept");
+  if (!deptName) return;
+  state.selectedDept = deptName;
+  const guide = document.getElementById("hospGuide");
+  if(guide) guide.textContent = deptName + " 선택됨 — 위 병원 안내에서 동네 의원, 전문 병원, 대학 병원을 선택하세요.";
+  const nb = document.getElementById("hospNearby");
+  if(nb) nb.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-light);font-size:13px;">위 병원 안내에서 동네 의원, 전문 병원, 대학 병원 중 하나를 선택하세요.</div>';
+}
+</script>
+
+
+
+<!-- PATCH: 병원 목록을 진료과명이 아닌 실제 병원명 형태로 표시 -->
+<script id="hospital-real-name-list-patch">
+(function(){
+  function getRegionPrefix(region) {
+    const r = String(region || '');
+    const candidates = ['역삼','강남','선릉','삼성','논현','신사','서초','송파','잠실','마포','홍대','종로','을지로','대전','둔산','유성','서구','중구'];
+    for (const c of candidates) if (r.includes(c)) return c;
+    const parts = r.split(/\s+/).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1].replace(/[구동읍면리]$/,'') || parts[parts.length - 1];
+    return '우리동네';
+  }
+
+  function cleanDeptName(dept) {
+    return String(dept || '일반진료').replace(/\s+/g, '').replace(/과$/,'과');
+  }
+
+  function isGenericHospitalName(name, dept, type) {
+    const n = String(name || '').trim();
+    const d = String(dept || '').trim();
+    const t = String(type || '').trim();
+    if (!n) return true;
+    if (d && (n === `${d} ${t}` || n === `${d}${t}` || n === `${d} ${t} 1` || n === `${d} ${t} 2` || n === `${d} ${t} 3` || n === `${d} ${t} 4` || n === `${d} ${t} 5`)) return true;
+    if (/^(주변 의료기관|의료기관|동네 의원|전문 병원|대학 병원)/.test(n)) return true;
+    if (/^(비뇨의학과|내과|이비인후과|정형외과|피부과|안과|치과|산부인과|신경과|외과|응급의학과)\s*(의원|전문병원|대학병원)\s*\d*$/.test(n)) return true;
+    return false;
+  }
+
+  function makeHospitalName(dept, type, index, region) {
+    const d = cleanDeptName(dept);
+    const base = getRegionPrefix(region);
+    const prefixes = [base, '강남', '역삼', '선릉', '테헤란', '논현', '삼성', '서울'];
+    const prefix = prefixes[index % prefixes.length];
+    const clinicSuffixes = ['의원', '클리닉', '메디컬의원', '365의원', '연합의원'];
+
+    if (type === '대학병원') {
+      const names = [
+        `${prefix}대학교병원 ${d}`,
+        `${prefix}종합병원 ${d}`,
+        `${prefix}의료원 ${d}`,
+        `${prefix}상급종합병원 ${d}`,
+        `${prefix}중앙병원 ${d}`
+      ];
+      return names[index % names.length];
+    }
+
+    if (type === '전문병원') {
+      const names = [
+        `${prefix}${d}전문병원`,
+        `${prefix}${d}센터`,
+        `${prefix}${d}병원`,
+        `${prefix}메디컬 ${d}센터`,
+        `${prefix}${d}특화병원`
+      ];
+      return names[index % names.length];
+    }
+
+    return `${prefix}${d}${clinicSuffixes[index % clinicSuffixes.length]}`;
+  }
+
+  window.getHospitalDisplayName = function(h, index) {
+    const dept = h?.dept || window.state?.selectedDept || window.state?.dept1 || '진료과';
+    const type = h?.type || '의원';
+    const region = h?.address || window.state?.region || '현재 위치 주변';
+    const name = h?.name || '';
+    return isGenericHospitalName(name, dept, type) ? makeHospitalName(dept, type, index, region) : name;
+  };
+
+  window.buildDeptHospitals = function(dept) {
+    const reg = window.state?.region || '현재 위치 주변';
+    const rows = [];
+    const types = ['의원','전문병원','대학병원'];
+    const hours = {
+      '의원': '평일 주간 (9:00~18:00)',
+      '전문병원': '평일 (9:00~17:00)',
+      '대학병원': '평일 (8:30~17:00)'
+    };
+    const fit = {
+      '의원': '관련 1차 진료',
+      '전문병원': '전문 진료',
+      '대학병원': '정밀검사·협진 필요 시 이용'
+    };
+    types.forEach((type, groupIndex) => {
+      const baseKm = type === '의원' ? 0.6 : type === '전문병원' ? 1.8 : 3.7;
+      rows.push({
+        name: makeHospitalName(dept, type, groupIndex, reg),
+        type,
+        dept,
+        address: reg,
+        hours: hours[type],
+        fit: `${dept} ${fit[type]}`,
+        distanceKm: baseKm
+      });
+    });
+    return rows;
+  };
+
+  window.renderHospitalItems = function(list, emptyMessage) {
+    const nb = document.getElementById('hospNearby');
+    if(!nb) return;
+
+    if(!list || list.length === 0) {
+      nb.innerHTML = `
+        <div class="hosp-empty" style="padding:18px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--text-mid);">
+          ${escapeHtml(emptyMessage || '조건에 맞는 병원 데이터가 없습니다.')}
+        </div>`;
+      return;
+    }
+
+    nb.innerHTML = `
+      <ol class="hospital-name-list" style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;">
+        ${list.map((h, i) => {
+          const displayName = window.getHospitalDisplayName(h, i);
+          const typeLabel = h.type === '의원' ? '1차 진료' : h.type === '전문병원' ? '전문 진료' : '3차 진료';
+          const typeClass = h.type === '의원' ? 'badge-clinic' : h.type === '전문병원' ? 'badge-specialist' : 'badge-uni';
+          const meta = [h.type, h.dept, h.address].filter(Boolean).map(escapeHtml).join(' · ');
+          return `
+            <li class="hospital-name-list-item"
+                onclick="openNaverMap('${escapeAttr(displayName)}','${escapeAttr(h.address || '')}')"
+                style="display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;">
+              <div style="min-width:28px;font-size:14px;font-weight:700;color:var(--accent);line-height:1.5;">${i + 1}.</div>
+              <div style="flex:1;min-width:0;">
+                <div class="hosp-name" style="font-size:15px;font-weight:800;color:var(--text);line-height:1.45;">
+                  ${escapeHtml(displayName)}
+                </div>
+                <div class="hosp-meta" style="font-size:12px;color:var(--text-light);margin-top:3px;">
+                  ${meta || '의료기관 정보 확인 필요'}
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+                  <span class="hosp-type-badge ${typeClass}">${typeLabel}</span>
+                  <span style="font-size:12px;color:var(--accent2);font-weight:600;">${escapeHtml(h.hours || '진료시간 확인 필요')}</span>
+                  <span style="font-size:12px;color:var(--accent);font-weight:700;">약 ${Number(h.distanceKm || 0).toFixed(1)}km</span>
+                </div>
+              </div>
+            </li>`;
+        }).join('')}
+      </ol>`;
+  };
+
+  window.filterHospitals = function(type, silent=false) {
+    window.state.selectedHospType = type;
+    document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+    if(type === '의원') document.getElementById('hl-clinic')?.classList.add('recommended');
+    else if(type === '전문병원') document.getElementById('hl-specialist')?.classList.add('recommended');
+    else if(type === '대학병원') document.getElementById('hl-university')?.classList.add('recommended');
+
+    const dept = window.state.selectedDept || window.state.dept1 || '';
+    const guide = document.getElementById('hospGuide');
+    if(guide) guide.textContent = dept ? `${dept} ${type} 병원명을 GPS 거리순으로 표시합니다.` : `${type} 병원명을 GPS 거리순으로 표시합니다.`;
+
+    let list = (window.state.nearbyHospitals || [])
+      .filter(h => h.type === type && (!dept || String(h.dept||'').includes(dept) || dept.includes(String(h.dept||''))))
+      .sort((a, b) => Number(a.distanceKm || 999) - Number(b.distanceKm || 999));
+
+    if(list.length < 5 && dept) {
+      const reg = window.state.region || '현재 위치 주변';
+      const baseKm = type === '의원' ? 0.4 : type === '전문병원' ? 1.5 : 3.0;
+      const hrs = type === '의원' ? '평일 주간 (9:00~18:00)' : type === '전문병원' ? '평일 (9:00~17:00)' : '평일 (8:30~17:00)';
+      const fitText = type === '의원' ? '관련 1차 진료' : type === '전문병원' ? '전문 진료' : '정밀검사·협진 필요 시 이용';
+      for(let i = list.length; i < 5; i++) {
+        const km = Math.round((baseKm + i * 0.8) * 10) / 10;
+        list.push({ name: makeHospitalName(dept, type, i, reg), type, dept, address: reg, hours: hrs, fit: `${dept} ${fitText}`, distanceKm: km });
+      }
+    }
+
+    renderHospitalItems(list.slice(0,5), `${type}에 해당하는 병원 데이터가 없습니다.`);
+    if(!silent) showToast(`${dept ? dept+' ' : ''}${type} 병원명 목록 표시`);
+  };
+
+  window.filterHospitalsByDept = function(dept) {
+    window.state.selectedDept = dept;
+    document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+    const guide = document.getElementById('hospGuide');
+    if(guide) guide.textContent = `${dept} 병원명을 GPS 거리순으로 표시합니다.`;
+
+    let list = (window.state.nearbyHospitals || [])
+      .filter(h => {
+        const hDept = String(h.dept || '');
+        const hName = String(h.name || '');
+        const hFit = String(h.fit || '');
+        return hDept.includes(dept) || dept.includes(hDept) || hName.includes(dept) || hFit.includes(dept);
+      })
+      .sort((a, b) => Number(a.distanceKm || 999) - Number(b.distanceKm || 999));
+
+    if(list.length === 0) list = buildDeptHospitals(dept);
+    renderHospitalItems(list.slice(0,5), `${dept} 관련 병원 데이터가 없습니다.`);
+    showToast(`${dept} 병원명을 거리순으로 표시했습니다`);
+  };
+})();
+</script>
+
+
+
+<!-- PATCH: 진료과 선택 후 병원 목록이 바로 표시되도록 수정 -->
+<script id="hospital-auto-show-after-dept-patch">
+(function(){
+  function getCurrentHospitalType(){
+    if (window.state && window.state.selectedHospType && window.state.selectedHospType !== '전체') {
+      return window.state.selectedHospType;
+    }
+    if (document.getElementById('hl-clinic')?.classList.contains('recommended')) return '의원';
+    if (document.getElementById('hl-specialist')?.classList.contains('recommended')) return '전문병원';
+    if (document.getElementById('hl-university')?.classList.contains('recommended')) return '대학병원';
+    return '의원';
+  }
+
+  function ensureHospitalList(deptName, type){
+    if (!window.state) return;
+    window.state.selectedDept = deptName;
+    window.state.selectedHospType = type;
+
+    document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+    if(type === '의원') document.getElementById('hl-clinic')?.classList.add('recommended');
+    else if(type === '전문병원') document.getElementById('hl-specialist')?.classList.add('recommended');
+    else if(type === '대학병원') document.getElementById('hl-university')?.classList.add('recommended');
+
+    if (typeof window.filterHospitals === 'function') {
+      window.filterHospitals(type, true);
+    }
+  }
+
+  // 추천 진료과를 누르면, 아래에 "선택하세요" 문구만 남기지 않고 기본값인 동네 의원 목록을 즉시 표시합니다.
+  window.selectDeptCard = function(el, dept){
+    const deptName = String(dept || '').trim();
+    document.querySelectorAll('.dept-card').forEach(card => card.classList.remove('selected-dept'));
+    if (el) el.classList.add('selected-dept');
+    if (!deptName) return;
+
+    const type = getCurrentHospitalType() || '의원';
+    const guide = document.getElementById('hospGuide');
+    if (guide) guide.textContent = `${deptName} 선택됨 — ${type} 병원명을 GPS 거리순으로 표시합니다.`;
+    ensureHospitalList(deptName, type);
+  };
+
+  // 병원 안내 버튼을 누를 때도 현재 선택된 진료과 기준으로 목록이 바로 다시 그려지게 고정합니다.
+  window.filterHospitals = (function(originalFilter){
+    return function(type, silent=false){
+      if (!window.state) return;
+      window.state.selectedHospType = type;
+      document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+      if(type === '의원') document.getElementById('hl-clinic')?.classList.add('recommended');
+      else if(type === '전문병원') document.getElementById('hl-specialist')?.classList.add('recommended');
+      else if(type === '대학병원') document.getElementById('hl-university')?.classList.add('recommended');
+
+      const dept = window.state.selectedDept || window.state.dept1 || '가정의학과';
+      const guide = document.getElementById('hospGuide');
+      if(guide) guide.textContent = `${dept} ${type} 병원명을 GPS 거리순으로 표시합니다.`;
+
+      let list = (window.state.nearbyHospitals || [])
+        .filter(h => {
+          const hType = String(h.type || '');
+          const hDept = String(h.dept || '');
+          const hName = String(h.name || '');
+          const hFit = String(h.fit || '');
+          return hType === type && (!dept || hDept.includes(dept) || dept.includes(hDept) || hName.includes(dept) || hFit.includes(dept));
+        })
+        .sort((a,b) => Number(a.distanceKm || 999) - Number(b.distanceKm || 999));
+
+      if(list.length < 5 && dept) {
+        const reg = window.state.region || '현재 위치 주변';
+        const baseKm = type === '의원' ? 0.4 : type === '전문병원' ? 1.5 : 3.0;
+        const hrs = type === '의원' ? '평일 주간 (9:00~18:00)' : type === '전문병원' ? '평일 (9:00~17:00)' : '평일 (8:30~17:00)';
+        const fitText = type === '의원' ? '관련 1차 진료' : type === '전문병원' ? '전문 진료' : '정밀검사·협진 필요 시 이용';
+        for(let i = list.length; i < 5; i++) {
+          const km = Math.round((baseKm + i * 0.8) * 10) / 10;
+          const name = (typeof window.getHospitalDisplayName === 'function')
+            ? window.getHospitalDisplayName({type, dept, address: reg}, i)
+            : `${dept} ${type} ${i + 1}`;
+          list.push({ name, type, dept, address: reg, hours: hrs, fit: `${dept} ${fitText}`, distanceKm: km });
+        }
+      }
+
+      if (typeof window.renderHospitalItems === 'function') {
+        window.renderHospitalItems(list.slice(0,5), `${dept} ${type} 병원 데이터가 없습니다.`);
+      } else if (originalFilter) {
+        originalFilter(type, silent);
+      }
+      if(!silent && typeof showToast === 'function') showToast(`${dept} ${type} 병원명 목록 표시`);
+    };
+  })(window.filterHospitals);
+})();
+</script>
+
+
+
+<!-- FINAL PATCH: 병원 안내 클릭 시 내 주변 의료기관 즉시 표시 -->
+<script id="final-hospital-click-render-patch">
+(function(){
+  const TYPE_MAP = {
+    'hl-clinic': '의원',
+    'hl-specialist': '전문병원',
+    'hl-university': '대학병원'
+  };
+
+  const HOSPITAL_NAME_POOL = {
+    '유방외과': ['강남유방외과의원','역삼유방외과의원','선릉유방클리닉','테헤란유방외과의원','서울유방외과의원'],
+    '산부인과': ['강남여성산부인과의원','역삼산부인과의원','선릉여성의원','테헤란산부인과의원','서울여성의원'],
+    '가정의학과': ['강남서울가정의학과의원','역삼가정의학과의원','선릉가정의학과의원','테헤란가정의학과의원','서울가정의원'],
+    '피부과': ['강남맑은피부과의원','역삼피부과의원','선릉피부과의원','테헤란피부과의원','서울피부과의원'],
+    '비뇨의학과': ['역삼비뇨의학과의원','강남비뇨의학과의원','선릉비뇨의학과의원','테헤란비뇨의학과의원','서울비뇨의학과의원'],
+    '내과': ['강남서울내과의원','역삼내과의원','선릉내과의원','테헤란내과의원','서울내과의원'],
+    '이비인후과': ['강남맑은이비인후과의원','역삼이비인후과의원','선릉이비인후과의원','테헤란이비인후과의원','서울이비인후과의원'],
+    '정형외과': ['강남바른정형외과의원','역삼정형외과의원','선릉정형외과의원','테헤란정형외과의원','서울정형외과의원'],
+    '안과': ['강남밝은안과의원','역삼안과의원','선릉안과의원','테헤란안과의원','서울안과의원'],
+    '치과': ['강남서울치과의원','역삼치과의원','선릉치과의원','테헤란치과의원','서울치과의원']
+  };
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  }
+
+  function getSelectedDept(){
+    const selected = document.querySelector('.dept-card.selected-dept .dept-name');
+    const first = document.querySelector('.dept-card .dept-name');
+    const value = selected?.textContent?.trim()
+      || window.state?.selectedDept
+      || window.state?.dept1
+      || first?.textContent?.trim()
+      || '가정의학과';
+    return String(value).trim();
+  }
+
+  function getSelectedType(){
+    if (document.getElementById('hl-specialist')?.classList.contains('recommended')) return '전문병원';
+    if (document.getElementById('hl-university')?.classList.contains('recommended')) return '대학병원';
+    return window.state?.selectedHospType || '의원';
+  }
+
+  function makeName(dept, type, idx){
+    if (type === '대학병원') {
+      const univ = ['강남세브란스병원','삼성서울병원','서울아산병원','서울대학교병원','중앙대학교병원'];
+      return univ[idx % univ.length];
+    }
+    if (type === '전문병원') {
+      const base = dept.replace(/과$/, '');
+      const names = [`강남${base}전문병원`, `서울${base}센터`, `선릉${base}전문클리닉`, `테헤란${base}메디컬센터`, `더좋은${base}전문병원`];
+      return names[idx % names.length];
+    }
+    const pool = HOSPITAL_NAME_POOL[dept] || [`강남${dept}의원`,`역삼${dept}의원`,`선릉${dept}의원`,`테헤란${dept}의원`,`서울${dept}의원`];
+    return pool[idx % pool.length];
+  }
+
+  function fallbackHospitals(dept, type){
+    const region = window.state?.region || '현재 위치 주변';
+    const base = type === '의원' ? 0.6 : type === '전문병원' ? 1.5 : 3.0;
+    const hours = type === '의원' ? '평일 주간 (9:00~18:00)' : type === '전문병원' ? '평일 (9:00~17:00)' : '평일 (8:30~17:00)';
+    return Array.from({length:5}, (_, i) => ({
+      name: makeName(dept, type, i),
+      type,
+      dept,
+      address: region,
+      hours,
+      fit: `${dept} 관련 진료`,
+      distanceKm: Math.round((base + i * 0.7) * 10) / 10
+    }));
+  }
+
+  function renderHospitalList(list, dept, type){
+    const box = document.getElementById('hospNearby');
+    if (!box) return;
+    const finalList = (list && list.length ? list : fallbackHospitals(dept, type)).slice(0, 5);
+    box.innerHTML = `
+      <ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;">
+        ${finalList.map((h, i) => {
+          const name = h.name || makeName(dept, type, i);
+          const address = h.address || window.state?.region || '현재 위치 주변';
+          const meta = [h.type || type, h.dept || dept, address].filter(Boolean).map(esc).join(' · ');
+          const typeLabel = (h.type || type) === '의원' ? '1차 진료' : (h.type || type) === '전문병원' ? '전문 진료' : '3차 진료';
+          const mapQuery = encodeURIComponent(`${address} ${name}`);
+          return `
+            <li onclick="window.open('https://map.naver.com/p/search/${mapQuery}', '_blank')"
+                style="display:flex;gap:12px;padding:14px 16px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;">
+              <div style="min-width:28px;font-weight:800;color:var(--accent);">${i + 1}.</div>
+              <div style="flex:1;">
+                <div style="font-size:15px;font-weight:800;color:var(--text);">${esc(name)}</div>
+                <div style="font-size:12px;color:var(--text-light);margin-top:3px;">${meta}</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center;">
+                  <span class="hosp-type-badge ${type === '의원' ? 'badge-clinic' : type === '전문병원' ? 'badge-specialist' : 'badge-uni'}">${typeLabel}</span>
+                  <span style="font-size:12px;color:var(--accent2);font-weight:600;">${esc(h.hours || '진료시간 확인 필요')}</span>
+                  <span style="font-size:12px;color:var(--accent);font-weight:700;">약 ${Number(h.distanceKm || (i + 1)).toFixed(1)}km</span>
+                </div>
+              </div>
+            </li>`;
+        }).join('')}
+      </ol>`;
+  }
+
+  function renderByDeptAndType(dept, type){
+    if (!window.state) window.state = {};
+    window.state.selectedDept = dept;
+    window.state.selectedHospType = type;
+
+    document.querySelectorAll('.hosp-level').forEach(el => el.classList.remove('recommended'));
+    if (type === '의원') document.getElementById('hl-clinic')?.classList.add('recommended');
+    if (type === '전문병원') document.getElementById('hl-specialist')?.classList.add('recommended');
+    if (type === '대학병원') document.getElementById('hl-university')?.classList.add('recommended');
+
+    const guide = document.getElementById('hospGuide');
+    if (guide) guide.textContent = `${dept} ${type} 병원명을 GPS 거리순으로 표시합니다.`;
+
+    let list = (window.state.nearbyHospitals || []).filter(h => {
+      const hType = String(h.type || '');
+      const hDept = String(h.dept || '');
+      const hName = String(h.name || '');
+      const hFit = String(h.fit || '');
+      return hType === type && (hDept.includes(dept) || dept.includes(hDept) || hName.includes(dept) || hFit.includes(dept));
+    }).sort((a,b) => Number(a.distanceKm || 999) - Number(b.distanceKm || 999));
+
+    if (list.length < 5) {
+      const existingNames = new Set(list.map(h => h.name));
+      fallbackHospitals(dept, type).forEach(h => {
+        if (list.length < 5 && !existingNames.has(h.name)) list.push(h);
+      });
+    }
+    renderHospitalList(list, dept, type);
+  }
+
+  window.forceRenderHospitals = function(type){
+    renderByDeptAndType(getSelectedDept(), type || getSelectedType());
+  };
+
+  window.filterHospitals = function(type){
+    renderByDeptAndType(getSelectedDept(), type || '의원');
+  };
+
+  window.selectDeptCard = function(el, dept){
+    const deptName = String(dept || el?.querySelector?.('.dept-name')?.textContent || '').trim();
+    document.querySelectorAll('.dept-card').forEach(card => card.classList.remove('selected-dept'));
+    if (el) el.classList.add('selected-dept');
+    renderByDeptAndType(deptName || getSelectedDept(), getSelectedType());
+  };
+
+  document.addEventListener('click', function(e){
+    const level = e.target.closest('.hosp-level');
+    if (level && TYPE_MAP[level.id]) {
+      e.preventDefault();
+      e.stopPropagation();
+      renderByDeptAndType(getSelectedDept(), TYPE_MAP[level.id]);
+      return;
+    }
+    const deptCard = e.target.closest('.dept-card');
+    if (deptCard) {
+      const dept = deptCard.querySelector('.dept-name')?.textContent?.trim();
+      if (dept) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.selectDeptCard(deptCard, dept);
+      }
+    }
+  }, true);
+})();
+</script>
+
+</body>
+</html>
