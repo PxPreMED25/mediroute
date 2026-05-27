@@ -634,23 +634,28 @@ async def search_hospitals_kakao_region(
         dept_aliases.append(stem)
 
     queries = []
-    for r in region_candidates:
-        for d in dept_aliases:
-            for q in [
-                f"{r} {d}",
-                f"{r} {d}의원",
-                f"{r} {d} 의원",
-                f"{r} {d} 병원",
-            ]:
-                q = " ".join(q.split())
-                if q and q not in queries:
-                    queries.append(q)
-    # 마지막 보조 검색: 진료과 결과가 부족한 경우라도 해당 지역 의료기관을 보여준다.
-    for r in region_candidates[:3]:
-        for q in [f"{r} 의원", f"{r} 병원", f"{r} 의료기관", f"{r} 클리닉"]:
-            q = " ".join(q.split())
-            if q not in queries:
-                queries.append(q)
+    # 병원급에 따라 검색어를 다르게 구성
+    if inst_type == "대학병원":
+        for r in region_candidates:
+            for d in dept_aliases:
+                for q in [f"{r} {d} 대학병원", f"{r} 대학병원 {d}", f"{r} {d} 종합병원", f"{r} 대학병원"]:
+                    q = " ".join(q.split())
+                    if q and q not in queries:
+                        queries.append(q)
+    elif inst_type == "전문병원":
+        for r in region_candidates:
+            for d in dept_aliases:
+                for q in [f"{r} {d} 병원", f"{r} {d} 전문병원", f"{r} {d} 전문"]:
+                    q = " ".join(q.split())
+                    if q and q not in queries:
+                        queries.append(q)
+    else:
+        for r in region_candidates:
+            for d in dept_aliases:
+                for q in [f"{r} {d} 의원", f"{r} {d}", f"{r} {d} 클리닉"]:
+                    q = " ".join(q.split())
+                    if q and q not in queries:
+                        queries.append(q)
 
     found: list[dict] = []
     seen: set[str] = set()
@@ -686,6 +691,20 @@ async def search_hospitals_kakao_region(
                         deptish = any(alias and alias.replace("의원", "") in f"{name} {category}" for alias in dept_aliases)
                         if not (medicalish or deptish):
                             continue
+
+                        # 병원급 필터링: 선택한 병원급과 맞지 않는 결과 제외
+                        name_lower = name
+                        if inst_type == "대학병원":
+                            if not any(k in name_lower for k in ["대학병원", "대학교병원", "종합병원", "의료원"]):
+                                continue
+                        elif inst_type == "전문병원":
+                            if "의원" in name_lower and "병원" not in name_lower:
+                                continue
+                            if not any(k in name_lower for k in ["병원", "의료원", "센터"]):
+                                continue
+                        else:  # 의원
+                            if any(k in name_lower for k in ["대학병원", "대학교병원", "종합병원"]):
+                                continue
 
                         key = f"{name}|{address}"
                         if key in seen:
