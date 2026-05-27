@@ -171,12 +171,28 @@ def _dept_search_terms(dept_name: str, inst_type: str) -> list[str]:
 
 def _is_probably_medical_place(name: str, category: str) -> bool:
     text = f"{name or ''} {category or ''}"
+    cat = category or ""
+    # 카카오 카테고리가 명백히 비의료인 경우 제외
+    non_medical_cats = ["음식점", "카페", "편의점", "마트", "슈퍼", "약국", "주유소",
+                        "주차", "숙박", "부동산", "은행", "교육", "학원", "미용",
+                        "세탁", "꽃배달", "김밥", "치킨", "피자", "커피", "베이커리",
+                        "문구", "서점", "헬스", "요가", "필라테스"]
+    if any(nc in cat for nc in non_medical_cats):
+        return False
+    # 이름에 "XX점"이 붙어 있으면 가맹점/식당일 가능성 (예: "슈퍼키친 건양대학교병원점")
+    import re
+    if re.search(r'(병원|의원)(점|지점|매장)$', name or ''):
+        return False
+    # 이름이 병원명이 아니라 "XX 건양대학교병원점" 같은 패턴
+    if re.search(r'^[가-힣a-zA-Z0-9]+\s+.*(병원|의원)(점|지점)$', name or ''):
+        return False
     if not any(k in text for k in ["병원", "의원", "클리닉", "의료원", "치과", "한의원", "보건"]):
         return False
     # 병원 이름이지만 실제 진료 장소가 아닌 부속시설 제외
     exclude = ["장례식장", "장례", "응급센터", "응급실", "주차장", "주차타워", "도서관",
                "매점", "구내식당", "편의점", "기숙사", "신관", "별관", "장애인주차",
-               "건강증진센터", "권역외상", "지하주차", "옥상", "사무실", "연구소", "연구동", "행정동"]
+               "건강증진센터", "권역외상", "지하주차", "옥상", "사무실", "연구소", "연구동",
+               "행정동", "키친", "커피", "카페", "식당", "푸드", "마트", "약국"]
     return not any(ex in (name or "") for ex in exclude)
 
 
