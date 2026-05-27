@@ -3047,11 +3047,6 @@ function openNaverMap(name, address) {
 }
 
 function openPlaceMap(placeUrl, name, address) {
-  const url = String(placeUrl || '').trim();
-  if (url) {
-    window.open(url, '_blank');
-    return;
-  }
   openNaverMap(name, address);
 }
 
