@@ -2555,24 +2555,26 @@ function resetHospitalList(message) {
 function renderHospitalItems(list, emptyMessage) {
   const nb = document.getElementById('hospNearby');
   if(!nb) return;
-  if(!list || list.length === 0) {
+  // 비의료 장소 필터링
+  const excludePatterns = /장례식장|응급센터|응급실|주차장|주차타워|도서관|매점|신관|별관|장애인|건강증진센터|권역외상|지하주차|옥상|구내식당|편의점|기숙사|연구[소동]|행정동|사무실/;
+  const filtered = (list || []).filter(h => {
+    const name = String(h.name || '');
+    if(excludePatterns.test(name)) return false;
+    return true;
+  }).slice(0, 5);
+  if(filtered.length === 0) {
     nb.innerHTML = `
       <div class="hosp-empty" style="padding:18px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--text-mid);">
         ${escapeHtml(emptyMessage || '조건에 맞는 병원 데이터가 없습니다.')}
       </div>`;
     return;
   }
-  nb.innerHTML = list.map((h, i) => {
-    const typeClass = h.type === '의원' ? 'badge-clinic' : h.type === '전문병원' ? 'badge-specialist' : 'badge-uni';
-    const typeLabel = h.type === '의원' ? '1차 진료' : h.type === '전문병원' ? '전문 진료' : '3차 진료';
-    const status = getHospitalOpenStatus(h);
+  nb.innerHTML = filtered.map((h, i) => {
     return `
       <div class="hosp-item" onclick="selectHospital(this, ${i})" data-index="${i}">
-        <span class="hosp-type-badge ${typeClass}">${typeLabel}</span>
         <div class="hosp-info" style="flex:1;">
           <div class="hosp-name">${i + 1}. ${escapeHtml(h.name)}</div>
           <div class="hosp-meta">${escapeHtml(h.type)} · ${escapeHtml(h.dept)} · ${escapeHtml(h.address || '위치 정보 없음')}</div>
-          <div class="hosp-open-status" style="color:${status.open === true ? 'var(--accent2)' : status.open === false ? 'var(--warn)' : 'var(--text-light)'};"><span class="status-dot ${status.open === true ? 'open' : status.open === false ? 'closed' : ''}"></span>${status.label}</div>
         </div>
         <button class="map-btn" onclick="event.stopPropagation(); openPlaceMap('${escapeAttr(h.placeUrl || '')}','${escapeAttr(h.name)}','${escapeAttr(h.address || '')}')" title="지도에서 보기">지도 보기</button>
       </div>`;
