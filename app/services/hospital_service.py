@@ -697,7 +697,7 @@ async def search_hospitals_kakao_region(
                         place_url = d.get("place_url", "")
                         found.append({
                             "name": name,
-                            "type": "의원" if any(x in name for x in ["의원", "치과", "한의원"]) else ("병원" if "병원" in name else inst_type),
+                            "type": inst_type,
                             "dept": guessed_dept,
                             "address": address,
                             "hours": "지도에서 진료시간 확인",
