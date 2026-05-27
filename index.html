@@ -2555,24 +2555,26 @@ function resetHospitalList(message) {
 function renderHospitalItems(list, emptyMessage) {
   const nb = document.getElementById('hospNearby');
   if(!nb) return;
-  if(!list || list.length === 0) {
+  // 비의료 장소 필터링
+  const excludePatterns = /장례식장|응급센터|응급실|주차장|주차타워|도서관|매점|신관|별관|장애인|건강증진센터|권역외상|지하주차|옥상|구내식당|편의점|기숙사|연구[소동]|행정동|사무실/;
+  const filtered = (list || []).filter(h => {
+    const name = String(h.name || '');
+    if(excludePatterns.test(name)) return false;
+    return true;
+  }).slice(0, 5);
+  if(filtered.length === 0) {
     nb.innerHTML = `
       <div class="hosp-empty" style="padding:18px;border:1.5px solid var(--border);background:var(--bg);font-size:13px;color:var(--text-mid);">
         ${escapeHtml(emptyMessage || '조건에 맞는 병원 데이터가 없습니다.')}
       </div>`;
     return;
   }
-  nb.innerHTML = list.map((h, i) => {
-    const typeClass = h.type === '의원' ? 'badge-clinic' : h.type === '전문병원' ? 'badge-specialist' : 'badge-uni';
-    const typeLabel = h.type === '의원' ? '1차 진료' : h.type === '전문병원' ? '전문 진료' : '3차 진료';
-    const status = getHospitalOpenStatus(h);
+  nb.innerHTML = filtered.map((h, i) => {
     return `
       <div class="hosp-item" onclick="selectHospital(this, ${i})" data-index="${i}">
-        <span class="hosp-type-badge ${typeClass}">${typeLabel}</span>
         <div class="hosp-info" style="flex:1;">
           <div class="hosp-name">${i + 1}. ${escapeHtml(h.name)}</div>
           <div class="hosp-meta">${escapeHtml(h.type)} · ${escapeHtml(h.dept)} · ${escapeHtml(h.address || '위치 정보 없음')}</div>
-          <div class="hosp-open-status" style="color:${status.open === true ? 'var(--accent2)' : status.open === false ? 'var(--warn)' : 'var(--text-light)'};"><span class="status-dot ${status.open === true ? 'open' : status.open === false ? 'closed' : ''}"></span>${status.label}</div>
         </div>
         <button class="map-btn" onclick="event.stopPropagation(); openPlaceMap('${escapeAttr(h.placeUrl || '')}','${escapeAttr(h.name)}','${escapeAttr(h.address || '')}')" title="지도에서 보기">지도 보기</button>
       </div>`;
@@ -2701,13 +2703,13 @@ async function requestUserGpsAndRefreshHospitals(dept, type) {
     renderHospitalItems([], '브라우저 GPS를 지원하지 않습니다. 입력한 지역 기준으로 실제 병원을 검색하는 중입니다...');
     const list = dedupeHospitals((await fetchGpsHospitalsFromBackend(dept, type))
       .filter(h => h.name && !looksGeneratedHospitalName(h.name, h.dept, h.type))).slice(0, 20);
-    renderHospitalItems(list, '입력한 지역 기준 실제 병원을 찾지 못했습니다. 지역명이나 진료과를 변경해 보세요.');
+    renderHospitalItems(list, '입력한 지역 기준 실제 병원을 찾지 못했습니다. 카카오 REST API 키 설정을 확인하세요.');
     return;
   }
   if(state.geolocationPending) return;
   state.geolocationPending = true;
   const guide = document.getElementById('hospGuide');
-  if(guide) guide.textContent = '현재 위치 권한을 확인하고 있습니다. 허용하면 카카오 기준 가까운 실제 병원을 검색합니다.';
+  if(guide) guide.textContent = '현재 위치 권한을 확인하고 있습니다. 허용하면 네이버/카카오 기준 가까운 실제 병원을 검색합니다.';
   renderHospitalItems([], '현재 위치 권한을 확인하는 중입니다...');
 
   navigator.geolocation.getCurrentPosition(async pos => {
@@ -2720,12 +2722,12 @@ async function requestUserGpsAndRefreshHospitals(dept, type) {
         .filter(h => h.name && !looksGeneratedHospitalName(h.name, h.dept, h.type));
       const list = dedupeHospitals(cleaned).slice(0, 20);
       if(state.selectedHospType === type && state.hospitalLevelClicked) {
-        renderHospitalItems(list, '현재 위치 주변에서 조건에 맞는 실제 병원을 찾지 못했습니다. 진료과나 병원급을 변경해 보세요.');
+        renderHospitalItems(list, '현재 위치 주변에서 조건에 맞는 실제 병원을 찾지 못했습니다. 백엔드에 네이버/카카오/HIRA API 키를 설정해야 실제 장소 검색이 가능합니다.');
       }
       if(guide) guide.textContent = list.length
-        ? '사용자 GPS 기준 가까운 실제 의료기관을 표시합니다. 카카오 장소 검색 결과이며 지도 보기에서 최종 확인하세요.'
-        : '현재 위치 주변 검색 결과가 없습니다. 지역명을 입력하면 해당 지역 기준으로 검색합니다.';
-      showToast(list.length ? '카카오 기준 가까운 실제 병원 목록을 불러왔습니다' : '검색 결과가 없습니다');
+        ? '사용자 GPS 기준 가까운 실제 의료기관을 표시합니다. 병원 검색은 네이버 우선, 카카오 보조, HIRA 보조 순서이며 지도 보기는 네이버 지도로 연결됩니다.'
+        : 'GPS는 확인됐지만 네이버/카카오/HIRA API 결과가 없습니다. 배포 서버 API 키 설정이 필요합니다.';
+      showToast(list.length ? '네이버/카카오 기준 가까운 실제 병원 목록을 불러왔습니다' : '실제 병원 API 결과가 없습니다');
     } catch(e) {
       if(state.selectedHospType === type && state.hospitalLevelClicked) {
         renderHospitalItems([], '병원 검색은 추후 연동 시 반영될 기능입니다.');
@@ -2778,8 +2780,8 @@ async function loadTypedRegionHospitals(dept, type, guide) {
       : '카카오 장소 검색 결과에 실제 의료기관이 있으면 표시됩니다. 지역명과 추천 진료과 조합을 확인하세요.';
   } catch(e) {
     console.error('hospital search failed', e);
-    renderHospitalItems([], '카카오 장소 검색에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-    if(guide) guide.textContent = '병원 검색에 실패했습니다. 잠시 후 다시 시도해 주세요.';
+    renderHospitalItems([], '병원 검색 API 연결에 실패했습니다. Render 배포 상태와 카카오 REST API 키 설정을 확인하세요.');
+    if(guide) guide.textContent = '병원 검색 API 연결에 실패했습니다. Render 환경변수와 배포 상태를 확인하세요.';
   }
 }
 
