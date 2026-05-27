@@ -1,0 +1,59 @@
+name: MediRoute CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Verify app imports
+        run: python -c "from app.main import app; print('✅ App OK')"
+
+      - name: Run KCD mapping tests
+        run: |
+          python -c "
+          from app.services.kcd_service import symptom_to_kcd, get_cost_by_kcd
+          r = symptom_to_kcd('무릎 통증 계단')
+          assert len(r) > 0 and r[0]['kcd'] == 'M17', f'KCD 매핑 실패: {r}'
+          c = get_cost_by_kcd('M17')
+          assert c is not None, 'M17 비용 조회 실패'
+          print('✅ KCD tests passed')
+          "
+
+      - name: Run auth tests
+        run: |
+          python -c "
+          from app.services.auth_service import create_access_token, verify_token
+          token = create_access_token(1)
+          uid = verify_token(token)
+          assert uid == 1, f'JWT 검증 실패: {uid}'
+          assert verify_token('bad') is None, 'Invalid token should return None'
+          print('✅ Auth tests passed')
+          "
+
+      - name: Verify all routes
+        run: |
+          python -c "
+          from app.main import app
+          paths = [r.path for r in app.routes if hasattr(r, 'path')]
+          required = ['/api/analyze', '/api/hospitals', '/api/kcd', '/api/cost', '/api/auth/kakao', '/api/user/history', '/health']
+          for p in required:
+              assert p in paths, f'Missing route: {p}'
+          print(f'✅ All {len(required)} required routes present')
+          "
