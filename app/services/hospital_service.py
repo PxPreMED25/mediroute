@@ -186,6 +186,17 @@ def _is_probably_medical_place(name: str, category: str) -> bool:
     # 이름이 병원명이 아니라 "XX 건양대학교병원점" 같은 패턴
     if re.search(r'^[가-힣a-zA-Z0-9]+\s+.*(병원|의원)(점|지점)$', name or ''):
         return False
+    # "투루카 충북대학교병원" 같이 병원명 앞에 비병원 단어가 붙은 경우
+    if re.search(r'^[가-힣a-zA-Z0-9]+\s+.*(대학교?병원|종합병원|의료원)$', name or ''):
+        return False
+    # "XX 00병원" 패턴 (앞 단어가 병원/의원/의료 키워드가 아닌 경우)
+    parts = (name or '').split()
+    if len(parts) >= 2:
+        first = parts[0]
+        if not any(k in first for k in ["병원", "의원", "의료", "클리닉", "치과", "한의", "보건", "센터"]):
+            rest = ' '.join(parts[1:])
+            if any(k in rest for k in ["대학교병원", "대학병원", "종합병원", "의료원"]):
+                return False
     if not any(k in text for k in ["병원", "의원", "클리닉", "의료원", "치과", "한의원", "보건"]):
         return False
     # 병원 이름이지만 실제 진료 장소가 아닌 부속시설 제외
