@@ -2556,7 +2556,7 @@ function renderHospitalItems(list, emptyMessage) {
   const nb = document.getElementById('hospNearby');
   if(!nb) return;
   // 비의료 장소 필터링
-  const excludePatterns = /장례식장|응급센터|응급실|주차장|주차타워|도서관|매점|신관|별관|장애인|건강증진센터|권역외상|지하주차|옥상|구내식당|편의점|기숙사|연구[소동]|행정동|사무실/;
+  const excludePatterns = /장례식장|응급센터|응급실|주차장|주차타워|도서관|매점|신관|별관|장애인|건강증진센터|권역외상|지하주차|옥상|구내식당|편의점|기숙사|연구[소동]|행정동|사무실|동물병원|동물의원|수의/;
   const filtered = (list || []).filter(h => {
     const name = String(h.name || '');
     if(excludePatterns.test(name)) return false;
@@ -2570,11 +2570,17 @@ function renderHospitalItems(list, emptyMessage) {
     return;
   }
   nb.innerHTML = filtered.map((h, i) => {
+    const status = getHospitalOpenStatus(h);
+    const dotColor = status.open === true ? '#38A169' : '#E53E3E';
+    const statusText = status.open === true ? '진료중' : '진료종료';
     return `
       <div class="hosp-item" onclick="selectHospital(this, ${i})" data-index="${i}">
         <div class="hosp-info" style="flex:1;">
           <div class="hosp-name">${i + 1}. ${escapeHtml(h.name)}</div>
           <div class="hosp-meta">${escapeHtml(h.type)} · ${escapeHtml(h.dept)} · ${escapeHtml(h.address || '위치 정보 없음')}</div>
+          <div style="margin-top:4px;font-size:12px;color:${dotColor};display:flex;align-items:center;gap:5px;">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${dotColor};"></span>${statusText}
+          </div>
         </div>
         <button class="map-btn" onclick="event.stopPropagation(); openPlaceMap('${escapeAttr(h.placeUrl || '')}','${escapeAttr(h.name)}','${escapeAttr(h.address || '')}')" title="지도에서 보기">지도 보기</button>
       </div>`;
