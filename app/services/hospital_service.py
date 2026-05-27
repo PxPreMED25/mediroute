@@ -698,15 +698,18 @@ async def search_hospitals_kakao_region(
                             if not any(k in name_lower for k in ["대학병원", "대학교병원", "종합병원", "의료원"]):
                                 continue
                         elif inst_type == "전문병원":
-                            if "의원" in name_lower and "병원" not in name_lower:
+                            # 대학병원은 전문병원 목록에서 제외
+                            if any(k in name_lower for k in ["대학병원", "대학교병원", "종합병원"]):
                                 continue
-                            if not any(k in name_lower for k in ["병원", "의료원", "센터"]):
+                            # 전문병원에는 병원, 의원, 의료원, 센터, 클리닉 모두 허용
+                            # (전문의가 있는 의원도 전문병원 카테고리에 포함)
+                            if not _is_probably_medical_place(name_lower, category):
                                 continue
                         else:  # 의원
                             if any(k in name_lower for k in ["대학병원", "대학교병원", "종합병원"]):
                                 continue
 
-                        key = f"{name}|{address}"
+                        key = name
                         if key in seen:
                             continue
 
@@ -1202,7 +1205,14 @@ REGION_CENTER_COORDS = {
 def _clean_hospital_name(name: str) -> str:
     import re
     cleaned = (name or '').strip()
-    cleaned = re.sub(r'\s*(강남점|역삼점|선릉점|압구정점|청담점|논현점|서초점|송파점|잠실점|도곡점|대치점|삼성점)$', '', cleaned)
+    # 지점명 제거
+    cleaned = re.sub(r'\s*(강남점|역삼점|선릉점|압구정점|청담점|논현점|서초점|송파점|잠실점|도곡점|대치점|삼성점|대전점)$', '', cleaned)
+    # "XX병원 부속시설명" → "XX병원"까지만 남김
+    # 예: "충남대학교병원 권역류마티스및퇴행성관절염센터" → "충남대학교병원"
+    # 예: "대전을지대학교병원 건강증진센터" → "대전을지대학교병원"
+    m = re.match(r'^(.+?(?:대학교?병원|병원|의원|의료원|클리닉|치과|한의원))\s+.+', cleaned)
+    if m:
+        cleaned = m.group(1)
     return cleaned.strip()
 
 
