@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     DATA_GO_KR_API_KEY: str = ""
 
     # ── 카카오맵 API (STEP 2에서 사용) ──
-    KAKAO_REST_API_KEY: str = ""
+    KAKAO_REST_API_KEY: str = "33ea3708e2930fe6d3d9b269bdbb5927"
 
     # ── 네이버 지도/지역 검색 API (GPS 기반 실제 병원 검색) ──
     # NAVER_SEARCH_CLIENT_ID/SECRET: 네이버 개발자센터 지역검색 API

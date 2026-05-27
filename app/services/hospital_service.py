@@ -171,7 +171,13 @@ def _dept_search_terms(dept_name: str, inst_type: str) -> list[str]:
 
 def _is_probably_medical_place(name: str, category: str) -> bool:
     text = f"{name or ''} {category or ''}"
-    return any(k in text for k in ["병원", "의원", "클리닉", "의료원", "치과", "한의원", "보건"])
+    if not any(k in text for k in ["병원", "의원", "클리닉", "의료원", "치과", "한의원", "보건"]):
+        return False
+    # 병원 이름이지만 실제 진료 장소가 아닌 부속시설 제외
+    exclude = ["장례식장", "장례", "응급센터", "응급실", "주차장", "주차타워", "도서관",
+               "매점", "구내식당", "편의점", "기숙사", "신관", "별관", "장애인주차",
+               "건강증진센터", "권역외상", "지하주차", "옥상", "사무실", "연구소", "연구동", "행정동"]
+    return not any(ex in (name or "") for ex in exclude)
 
 
 def _is_relevant_place(name: str, category: str, dept_name: str, inst_type: str) -> bool:
@@ -556,17 +562,12 @@ async def search_hospitals_kakao_region(
     limit: int = 20,
 ) -> list[dict]:
     """
-    카카오맵 검색창 방식의 지역명 + 진료과 실제 장소 검색.
+    카카오 Local API로 GPS 없이 지역명 + 진료과 기준 실제 병원/의원 검색.
 
-    원칙:
-    - 사용자가 카카오맵에 직접 입력하는 형태의 검색어를 그대로 만든다.
-      예) "충북 청주시 상당구 안과", "대전 서구 탄방동 이비인후과"
-    - 동네 의원: 지역 + 진료과 중심.
-    - 전문 병원: 지역 + 진료과, 지역 + 진료과 + 병원/전문병원 중심.
-      카카오 API는 전문의 유무를 구조화해서 주지 않으므로 상세 여부는 지도 보기에서 확인한다.
-    - 대학 병원: 지역 + 진료과 + 대학병원/대학교병원 중심.
-    - 카카오 API에서 내려온 실제 place_name/address/place_url을 화면에 그대로 표시한다.
-    - 과도한 지역/진료과/기관유형 필터링으로 실제 결과가 사라지는 문제를 피한다.
+    핵심 원칙:
+    - 카카오맵 검색창에 입력하는 것과 최대한 같은 검색어를 사용합니다.
+    - 검색어 자체가 "지역 + 진료과"이므로 프론트/백엔드에서 과도한 필터링을 하지 않습니다.
+    - 카카오에서 내려온 실제 장소명, 주소, place_url만 화면에 표시합니다.
     """
     settings = get_settings()
     region = (region or "").strip()
@@ -582,51 +583,40 @@ async def search_hospitals_kakao_region(
 
     headers = {"Authorization": f"KakaoAK {settings.KAKAO_REST_API_KEY}"}
 
-    def compact(text: str) -> str:
-        return " ".join((text or "").split()).strip()
+    # 지역명 확장/축약 후보를 만든다.
+    raw_region = region
+    region_norm = (raw_region
+        .replace("경기도", "경기")
+        .replace("충청북도", "충북")
+        .replace("충청남도", "충남")
+        .replace("전라북도", "전북")
+        .replace("전라남도", "전남")
+        .replace("경상북도", "경북")
+        .replace("경상남도", "경남")
+        .replace("강원특별자치도", "강원")
+        .replace("서울특별시", "서울")
+        .replace("부산광역시", "부산")
+        .replace("대구광역시", "대구")
+        .replace("인천광역시", "인천")
+        .replace("광주광역시", "광주")
+        .replace("대전광역시", "대전")
+        .replace("울산광역시", "울산")
+        .replace("세종특별자치시", "세종")
+    )
+    parts = [x for x in region_norm.split() if x]
+    region_candidates = []
+    for r in [raw_region, region_norm, " ".join(parts[:3]), " ".join(parts[:2]), " ".join(parts[-2:]), " ".join(parts[-1:])]:
+        r = (r or "").strip()
+        if r and r not in region_candidates:
+            region_candidates.append(r)
 
-    # 광역자치단체 약칭/정식명 양방향 보정
-    abbrev_to_full = {
-        "서울": "서울특별시", "부산": "부산광역시", "대구": "대구광역시", "인천": "인천광역시",
-        "광주": "광주광역시", "대전": "대전광역시", "울산": "울산광역시", "세종": "세종특별자치시",
-        "경기": "경기도", "강원": "강원특별자치도", "충북": "충청북도", "충남": "충청남도",
-        "전북": "전라북도", "전남": "전라남도", "경북": "경상북도", "경남": "경상남도", "제주": "제주특별자치도",
-    }
-    full_to_abbrev = {v: k for k, v in abbrev_to_full.items()}
-
-    raw = compact(region)
-    variants = []
-    def add_region(r: str):
-        r = compact(r)
-        if r and r not in variants:
-            variants.append(r)
-
-    add_region(raw)
-    norm = raw
-    for full, short in full_to_abbrev.items():
-        norm = norm.replace(full, short)
-    add_region(norm)
-    for short, full in abbrev_to_full.items():
-        if norm.startswith(short + " "):
-            add_region(norm.replace(short, full, 1))
-    parts = [x for x in norm.split() if x]
-    # 상세 주소가 동까지 들어오면 시군구, 구동, 동 단위까지 순차 검색
-    for n in [4, 3, 2, 1]:
-        if len(parts) >= n:
-            add_region(" ".join(parts[:n]))
-    if len(parts) >= 3:
-        add_region(" ".join(parts[1:3]))  # 예: 청주시 상당구
-        add_region(" ".join(parts[-2:]))  # 예: 상당구 용암동
-    if len(parts) >= 2:
-        add_region(parts[-1])
-
-    # 진료과 별칭. 카카오맵 검색어와 맞추기 위해 과명/의원/병원 조합을 모두 시도한다.
+    # 진료과명 후보를 만든다. 사용자가 예로 든 카카오맵 검색어와 동일하게 "과", "과의원", "과 의원"을 모두 시도한다.
     dept_alias_map = {
         "비뇨의학과": ["비뇨의학과", "비뇨기과"],
         "이비인후과": ["이비인후과"],
         "정신건강의학과": ["정신건강의학과", "정신과"],
-        "가정의학과": ["가정의학과"],
-        "재활의학과": ["재활의학과"],
+        "가정의학과": ["가정의학과", "가정의원"],
+        "재활의학과": ["재활의학과", "재활의원"],
         "소화기내과": ["소화기내과", "내과"],
         "알레르기내과": ["알레르기내과", "내과"],
         "감염내과": ["감염내과", "내과"],
@@ -636,87 +626,38 @@ async def search_hospitals_kakao_region(
         "류마티스내과": ["류마티스내과", "내과"],
         "산부인과": ["산부인과", "여성의원"],
         "치과": ["치과"],
-        "안과": ["안과"],
-        "정형외과": ["정형외과"],
-        "신경과": ["신경과"],
-        "신경외과": ["신경외과"],
-        "피부과": ["피부과"],
-        "내과": ["내과"],
-        "외과": ["외과"],
         "한의원": ["한의원", "한방병원"],
     }
-    dept_aliases = []
-    for d in dept_alias_map.get(dept, [dept]):
-        d = compact(d)
-        if d and d not in dept_aliases:
-            dept_aliases.append(d)
+    dept_aliases = dept_alias_map.get(dept, [dept])
     stem = dept.replace("의학과", "").replace("과", "").strip()
-    if stem and len(stem) >= 2 and stem not in dept_aliases:
+    if stem and stem not in dept_aliases and len(stem) >= 2:
         dept_aliases.append(stem)
 
-    queries: list[str] = []
-    def add_query(q: str):
-        q = compact(q)
-        if q and q not in queries:
-            queries.append(q)
-
-    primary_regions = variants[:8]
-    is_univ = inst_type == "대학병원"
-    is_special = inst_type == "전문병원"
-
-    for r in primary_regions:
+    queries = []
+    for r in region_candidates:
         for d in dept_aliases:
-            if is_univ:
-                # 카카오맵에서 대학병원 검색할 때 사용자가 입력하는 방식
-                for q in [
-                    f"{r} {d} 대학병원",
-                    f"{r} {d} 대학교병원",
-                    f"{r} 대학병원 {d}",
-                    f"{r} 대학교병원 {d}",
-                    f"{r} 대학병원",
-                    f"{r} 대학교병원",
-                    f"{r} 종합병원 {d}",
-                ]:
-                    add_query(q)
-            elif is_special:
-                # 전문의/전문병원 여부는 카카오 API 필드로 바로 판정하기 어렵기 때문에
-                # 진료과 병원 검색 결과를 보여주고 상세는 지도 보기에서 확인하게 한다.
-                for q in [
-                    f"{r} {d}",
-                    f"{r} {d} 병원",
-                    f"{r} {d} 전문병원",
-                    f"{r} {d}의원",
-                    f"{r} {d} 의원",
-                ]:
-                    add_query(q)
-            else:
-                # 동네 의원: 카카오맵 검색창과 같은 가장 단순한 검색어를 우선한다.
-                for q in [
-                    f"{r} {d}",
-                    f"{r} {d}의원",
-                    f"{r} {d} 의원",
-                    f"{r} {d} 병원",
-                ]:
-                    add_query(q)
-
-    # 마지막 보조 검색. 진료과 결과가 적을 때만 지역 의료기관 후보를 확보한다.
-    for r in primary_regions[:4]:
-        if is_univ:
-            for q in [f"{r} 대학병원", f"{r} 대학교병원", f"{r} 종합병원"]:
-                add_query(q)
-        elif is_special:
-            for q in [f"{r} 병원", f"{r} 전문병원", f"{r} 종합병원"]:
-                add_query(q)
-        else:
-            for q in [f"{r} 의원", f"{r} 병원", f"{r} 의료기관"]:
-                add_query(q)
+            for q in [
+                f"{r} {d}",
+                f"{r} {d}의원",
+                f"{r} {d} 의원",
+                f"{r} {d} 병원",
+            ]:
+                q = " ".join(q.split())
+                if q and q not in queries:
+                    queries.append(q)
+    # 마지막 보조 검색: 진료과 결과가 부족한 경우라도 해당 지역 의료기관을 보여준다.
+    for r in region_candidates[:3]:
+        for q in [f"{r} 의원", f"{r} 병원", f"{r} 의료기관", f"{r} 클리닉"]:
+            q = " ".join(q.split())
+            if q not in queries:
+                queries.append(q)
 
     found: list[dict] = []
     seen: set[str] = set()
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             for query in queries:
-                logger.info(f"Kakao map-style hospital query: {query}")
+                logger.info(f"Kakao hospital keyword query: {query}")
                 for page in range(1, 4):
                     resp = await client.get(
                         "https://dapi.kakao.com/v2/local/search/keyword.json",
@@ -725,52 +666,52 @@ async def search_hospitals_kakao_region(
                     )
                     logger.info(f"Kakao status={resp.status_code} query='{query}' page={page}")
                     if resp.status_code != 200:
-                        logger.warning(f"카카오 장소 검색 실패 HTTP {resp.status_code}: {resp.text[:300]}")
+                        logger.warning(f"카카오 지역 병원 검색 실패 HTTP {resp.status_code}: {resp.text[:300]}")
                         break
                     data = resp.json()
                     docs = data.get("documents", []) or []
                     logger.info(f"Kakao documents={len(docs)} query='{query}' page={page}")
                     if not docs:
                         break
-                    for item in docs:
-                        name = _clean_hospital_name(item.get("place_name", ""))
-                        address = item.get("road_address_name") or item.get("address_name") or ""
-                        category = item.get("category_name", "") or ""
+                    for d in docs:
+                        name = _clean_hospital_name(d.get("place_name", ""))
+                        category = d.get("category_name", "") or ""
+                        address = d.get("road_address_name") or d.get("address_name") or ""
                         if not name or not address:
                             continue
-                        # API 검색어 자체가 지역+진료과/의료기관이므로, 실제 장소 결과는 최대한 표시한다.
-                        # 단, 명백한 광고/비의료 키워드만 제외한다. Kakao Local API에는 웹 지도 광고 카드가 포함되지 않는다.
-                        if any(bad in name for bad in ["광고", "AD", "유니클로", "렌터카", "호텔", "카페"]):
+
+                        # 카카오 장소 검색 결과가 "지역 + 진료과" 검색에서 온 실제 장소라면 우선 허용한다.
+                        # 단, 명백한 비의료 장소는 제외한다.
+                        medicalish = _is_probably_medical_place(name, category)
+                        deptish = any(alias and alias.replace("의원", "") in f"{name} {category}" for alias in dept_aliases)
+                        if not (medicalish or deptish):
                             continue
+
                         key = f"{name}|{address}"
                         if key in seen:
                             continue
+
+                        lat = _safe_float(d.get("y"))
+                        lng = _safe_float(d.get("x"))
                         guessed_dept = dept_name or _guess_dept_from_text(name + " " + category) or dept
-                        place_url = item.get("place_url", "")
-                        if "대학" in name or "대학교" in name or "종합병원" in name or "의료원" in name:
-                            out_type = "대학병원" if is_univ else ("전문병원" if is_special else "병원")
-                        elif "병원" in name:
-                            out_type = "전문병원" if is_special else "병원"
-                        else:
-                            out_type = "의원"
+                        place_url = d.get("place_url", "")
                         found.append({
                             "name": name,
-                            "type": out_type,
+                            "type": "의원" if any(x in name for x in ["의원", "치과", "한의원"]) else ("병원" if "병원" in name else inst_type),
                             "dept": guessed_dept,
                             "address": address,
                             "hours": "지도에서 진료시간 확인",
                             "openStatus": "지도에서 진료시간 확인",
                             "fit": f"{query} 카카오 장소 검색 결과",
                             "distanceKm": 0.0,
-                            "telno": item.get("phone", ""),
-                            "lat": _safe_float(item.get("y")),
-                            "lng": _safe_float(item.get("x")),
+                            "telno": d.get("phone", ""),
+                            "lat": lat,
+                            "lng": lng,
                             "naverMapUrl": place_url or _naver_map_url(name, address),
                             "placeUrl": place_url,
-                            "source": "kakao_local_keyword",
+                            "source": "kakao_local_region_keyword",
                             "category": category,
                             "query": query,
-                            "specialistNote": "전문의 여부는 지도 상세에서 확인" if is_special else "",
                         })
                         seen.add(key)
                         if len(found) >= limit:
@@ -782,7 +723,6 @@ async def search_hospitals_kakao_region(
         return []
 
     return found[:limit]
-
 
 
 # ═══════════════════════════════════════
